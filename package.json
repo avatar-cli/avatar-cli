@@ -1,0 +1,33 @@
+{
+  "name": "@avatar-cli/avatar-cli",
+  "version": "0.0.1",
+  "description": "Avatar-CLI",
+  "author": "Andres Correa Casablanca <castarco@coderspirit.xyz>",
+  "license": "GPL-3.0",
+  "repository": {
+    "type" : "git",
+    "url" : "https://gitlab.com/avatar-cli/avatar-cli.git"
+  },
+  "scripts": {
+    "commitlint": "commitlint",
+    "git-cz": "git-cz"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "commitizen": "^4.1.2",
+    "cz-conventional-changelog": "^3.2.0",
+    "husky": "^4.2.5"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "prepare-commit-msg": "exec < /dev/tty && npm run git-cz -- --hook || true",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  }
+}
