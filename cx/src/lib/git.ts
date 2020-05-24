@@ -20,9 +20,9 @@ export async function getCommitHashesList(fromRef: string, toRef: string): Promi
 }
 
 export async function getCommitMessageTitle(ref: string): Promise<string> {
-  return await cleanExecWithStringReturn(`git show -s --format="%s" ${ref}`)
+  return await cleanExecWithStringReturn(`git show -s --format="%s" ${ref}`, { GIT_PAGER: '' })
 }
 
 export async function getCommitMessageBody(ref: string): Promise<string> {
-  return await cleanExecWithStringReturn(`git show -s --format="%b" ${ref}`)
+  return await cleanExecWithStringReturn(`git show -s --format="%b" ${ref}`, { GIT_PAGER: '' })
 }
