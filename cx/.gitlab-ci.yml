@@ -6,6 +6,9 @@ boilerplate_checks:
   stage: boilerplate_checks
   image: 'node:14-buster'
   tags: [docker]
+  except:
+    refs:
+      - master
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
