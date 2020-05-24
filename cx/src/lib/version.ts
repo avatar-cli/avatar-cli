@@ -1,5 +1,6 @@
 import { parse as tomlParse } from 'toml'
 import { execWithStringReturn } from './exec'
+import { CommitMessage } from './git'
 
 export async function getPackageJsonVersionFromCommit(ref: string): Promise<[number, number, number]> {
   const packageJson = JSON.parse(await execWithStringReturn(`git show ${ref}:cx/package.json`, { GIT_PAGER: '' }))
@@ -23,4 +24,33 @@ export async function getCargoTomlVersionFromCommit(ref: string): Promise<[numbe
   }
 
   return strVersionParts.map(n => Number(n)) as [number, number, number]
+}
+
+export async function computeVersion(
+  baseVersion: [number, number, number],
+  commitMessages: CommitMessage[]
+): Promise<[number, number, number]> {
+  let majorChange = false
+  let minorChange = false
+  let patchChange = false
+
+  for (const commitMessage of commitMessages) {
+    if (commitMessage.title.match(/!:\s/) || commitMessage.body.match(/BREAKING CHANGE/)) {
+      majorChange = true
+      break
+    } else if (commitMessage.title.match(/^(feat)(\([^\)]+\))?:/)) {
+      minorChange = true
+    } else if (commitMessage.title.match(/^(fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^\)]+\))?:/)) {
+      patchChange = true
+    }
+  }
+
+  if (majorChange) {
+    return [baseVersion[0] + 1, 0, 0]
+  } else if (minorChange) {
+    return [baseVersion[0], baseVersion[1] + 1, 0]
+  } else if (patchChange) {
+    return [baseVersion[0], baseVersion[1], baseVersion[1] + 1]
+  }
+  return baseVersion
 }

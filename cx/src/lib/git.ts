@@ -1,5 +1,10 @@
 import { cleanExecWithStringReturn, execWithStringReturn } from './exec'
 
+export type CommitMessage = {
+  title: string
+  body: string
+}
+
 export async function checkIfSigned(ref: string): Promise<boolean> {
   const gitShowResult = await execWithStringReturn(`git show -s --show-signature --format="" ${ref}`)
   return !!gitShowResult.match(/^gpg: Signature made/)
@@ -25,4 +30,17 @@ export async function getCommitMessageTitle(ref: string): Promise<string> {
 
 export async function getCommitMessageBody(ref: string): Promise<string> {
   return await cleanExecWithStringReturn(`git show -s --format="%b" ${ref}`, { GIT_PAGER: '' })
+}
+
+export async function getCommitMessages(fromRef: string, toRef: string): Promise<CommitMessage[]> {
+  const commitHashes = await getCommitHashesList(fromRef, toRef)
+
+  return Promise.all(
+    commitHashes.map(async hash => {
+      return {
+        title: await getCommitMessageTitle(hash),
+        body: await getCommitMessageBody(hash),
+      }
+    })
+  )
 }
