@@ -33,11 +33,14 @@ export async function computeVersion(
   let majorChange = false
   let minorChange = false
   let patchChange = false
+  let belowOne = baseVersion[0] === 0
 
   for (const commitMessage of commitMessages) {
     if (commitMessage.title.match(/!:\s/) || commitMessage.body.match(/BREAKING CHANGE/)) {
       majorChange = true
-      break
+      if (belowOne && commitMessage.title.match(/^feat!: release 1.0$/)) {
+        belowOne = false
+      }
     } else if (commitMessage.title.match(/^(feat)(\([^\)]+\))?:/)) {
       minorChange = true
     } else if (commitMessage.title.match(/^(fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^\)]+\))?:/)) {
@@ -46,7 +49,7 @@ export async function computeVersion(
   }
 
   if (majorChange) {
-    return [baseVersion[0] + 1, 0, 0]
+    return belowOne ? [baseVersion[0], baseVersion[1] + 1, 0] : [baseVersion[0] + 1, 0, 0]
   } else if (minorChange) {
     return [baseVersion[0], baseVersion[1] + 1, 0]
   } else if (patchChange) {
