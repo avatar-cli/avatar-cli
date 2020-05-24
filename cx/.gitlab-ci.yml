@@ -4,27 +4,11 @@ stages:
 
 git_checks:
   stage: git_checks
-  image: "node:14-buster"
+  image: 'node:14-buster'
   tags: [docker]
+  variables:
+    PATH: '$CI_PROJECT_DIR/cx/node_modules/.bin:$PATH'
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
-    - 'git fetch --all'
-    - 'COMMON_ANCESTOR="$(git merge-base origin/master "${CI_COMMIT_SHA}")"'
-
-    - 'echo "Validating commit messages:"'
-    - 'npm run commitlint -- --from "${COMMON_ANCESTOR}"'
-
-    - 'echo "Checking that commits are signed (but not verifying signatures):"'
-    - 'COMMITS_LIST="$(git rev-list "${COMMON_ANCESTOR}".."${CI_COMMIT_SHA}")";'
-    - |
-      for commit_hash in ${COMMITS_LIST}; do
-        IS_SIGNED="$(
-          (git show --show-signature "${commit_hash}" || true) \
-          | head -n 2 \
-          | grep "^gpg: Signature made" \
-          | wc -l
-        )";
-        test "${IS_SIGNED}" -eq "1" \
-        || (echo "ERROR: Commit ${commit_hash} is not signed"; false);
-      done
+    - './src/scripts/git_checks.ts'

@@ -10,14 +10,27 @@
   },
   "scripts": {
     "commitlint": "commitlint",
-    "git-cz": "git-cz"
+    "git-cz": "git-cz",
+    "lint:eslint": "eslint ./ -c .eslintrc.js --ext ts --cache --max-warnings 0",
+    "lint:tsc": "tsc --noEmit",
+    "lint": "npm run lint:eslint && npm run lint:tsc"
   },
   "dependencies": {
     "@commitlint/cli": "^8.3.5",
     "@commitlint/config-conventional": "^8.3.4",
+    "@types/node": "^14.0.5",
+    "@typescript-eslint/eslint-plugin": "^3.0.0",
+    "@typescript-eslint/parser": "^3.0.0",
     "commitizen": "^4.1.2",
     "cz-conventional-changelog": "^3.2.0",
-    "husky": "^4.2.5"
+    "eslint": "^7.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "husky": "^4.2.5",
+    "prettier": "^2.0.5",
+    "simple-git": "^2.5.0",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
   },
   "commitlint": {
     "extends": [
@@ -61,5 +74,13 @@
       "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "bracketSpacing": true,
+    "printWidth": 120,
+    "singleQuote": true,
+    "semi": false,
+    "trailingComma": "es5"
   }
 }
