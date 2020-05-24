@@ -1,0 +1,5 @@
+[package]
+name = "avatar-cli"
+version = "0.0.1"
+authors = ["Andres Correa Casablanca <castarco@coderspirit.xyz>"]
+edition = "2018"
