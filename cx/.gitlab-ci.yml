@@ -6,9 +6,9 @@ git_checks:
   stage: git_checks
   image: 'node:14-buster'
   tags: [docker]
-  variables:
-    PATH: '$CI_PROJECT_DIR/cx/node_modules/.bin:$PATH'
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
-    - './src/scripts/git_checks.ts'
+    - |
+      PATH="${CI_PROJECT_DIR}/cx/node_modules/.bin:${PATH}" \
+      ./src/scripts/git_checks.ts
