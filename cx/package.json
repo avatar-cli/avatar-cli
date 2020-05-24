@@ -1,0 +1,65 @@
+{
+  "name": "@avatar-cli/avatar-cli",
+  "version": "0.0.1",
+  "description": "Avatar-CLI",
+  "author": "Andres Correa Casablanca <castarco@coderspirit.xyz>",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/avatar-cli/avatar-cli.git"
+  },
+  "scripts": {
+    "commitlint": "commitlint",
+    "git-cz": "git-cz"
+  },
+  "dependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "commitizen": "^4.1.2",
+    "cz-conventional-changelog": "^3.2.0",
+    "husky": "^4.2.5"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ],
+    "rules": {
+      "header-min-length": [
+        2,
+        "always",
+        8
+      ],
+      "header-max-length": [
+        2,
+        "always",
+        72
+      ],
+      "subject-min-length": [
+        2,
+        "always",
+        3
+      ],
+      "subject-max-length": [
+        2,
+        "always",
+        50
+      ],
+      "body-max-line-length": [
+        2,
+        "always",
+        80
+      ]
+    }
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  }
+}

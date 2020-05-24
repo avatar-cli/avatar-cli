@@ -7,7 +7,8 @@ git_checks:
   image: "node:14-buster"
   tags: [docker]
   script:
-    - 'npm install --only=dev'
+    - 'cd "${CI_PROJECT_DIR}/cx"'
+    - 'npm install'
     - 'git fetch --all'
     - 'COMMON_ANCESTOR="$(git merge-base origin/master "${CI_COMMIT_SHA}")"'
 
