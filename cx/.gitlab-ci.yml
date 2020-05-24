@@ -1,14 +1,15 @@
 ---
 stages:
-  - git_checks
+  - boilerplate_checks
 
-git_checks:
-  stage: git_checks
+boilerplate_checks:
+  stage: boilerplate_checks
   image: 'node:14-buster'
   tags: [docker]
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
+    - 'npm lint'
     - |
       PATH="${CI_PROJECT_DIR}/cx/node_modules/.bin:${PATH}" \
       ./src/scripts/git_checks.ts
