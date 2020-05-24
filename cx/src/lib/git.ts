@@ -32,9 +32,7 @@ export async function getCommitMessageBody(ref: string): Promise<string> {
   return await cleanExecWithStringReturn(`git show -s --format="%b" ${ref}`, { GIT_PAGER: '' })
 }
 
-export async function getCommitMessages(fromRef: string, toRef: string): Promise<CommitMessage[]> {
-  const commitHashes = await getCommitHashesList(fromRef, toRef)
-
+export async function getCommitMessages(commitHashes: string[]): Promise<CommitMessage[]> {
   return Promise.all(
     commitHashes.map(async hash => {
       return {
