@@ -1,4 +1,4 @@
-import { parse as tomlParse } from 'toml'
+import { parse as tomlParse, JsonMap } from '@iarna/toml'
 import { execWithStringReturn } from './exec'
 import { CommitMessage } from './git'
 
@@ -16,7 +16,7 @@ export async function getPackageJsonVersionFromCommit(ref: string): Promise<[num
 
 export async function getCargoTomlVersionFromCommit(ref: string): Promise<[number, number, number]> {
   const cargoToml = tomlParse(await execWithStringReturn(`git show ${ref}:Cargo.toml`, { GIT_PAGER: '' }))
-  const strVersion = (cargoToml?.package?.version || '0.0.0') as string
+  const strVersion = ((cargoToml.package as JsonMap).version || '0.0.0') as string
   const strVersionParts = strVersion.split('.')
 
   if (strVersionParts.length !== 3) {

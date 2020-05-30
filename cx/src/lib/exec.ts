@@ -1,7 +1,7 @@
 import { promisify } from 'util'
 import { exec as cbExec } from 'child_process'
 
-const __exec = promisify(cbExec)
+const exec = promisify(cbExec)
 
 async function execWithStringReturn(
   command: string,
@@ -10,14 +10,14 @@ async function execWithStringReturn(
 ): Promise<string> {
   const commandEnv = mergeEnvs ? { ...process.env, ...(env ?? {}) } : env ?? process.env
   try {
-    const { stdout } = await __exec(command, { env: commandEnv })
+    const { stdout } = await exec(command, { env: commandEnv })
     return stdout
   } catch (reason) {
     if (reason?.stdout) {
-      console.log(reason.stdout.toString ? reason.stdout.toString() : `${reason.stdout}`)
+      console.log(reason.stdout.toString())
     }
     if (reason?.stderr) {
-      console.error(reason.stderr.toString ? reason.stderr.toString() : `${reason.stderr}`)
+      console.error(reason.stderr.toString())
     }
     throw reason
   }
