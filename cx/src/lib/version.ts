@@ -53,7 +53,7 @@ export async function computeVersion(
   } else if (minorChange) {
     return [baseVersion[0], baseVersion[1] + 1, 0]
   } else if (patchChange) {
-    return [baseVersion[0], baseVersion[1], baseVersion[1] + 1]
+    return [baseVersion[0], baseVersion[1], baseVersion[2] + 1]
   }
   return baseVersion
 }
