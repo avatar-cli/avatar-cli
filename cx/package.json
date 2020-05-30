@@ -72,6 +72,7 @@
   "husky": {
     "hooks": {
       "pre-commit": "ts-node ./src/scripts/pre_commit.ts",
+      "pre-push": "ts-node ./src/scripts/git_checks.ts",
       "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
