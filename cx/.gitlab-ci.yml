@@ -13,6 +13,4 @@ boilerplate_checks:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
     - 'npm run lint'
-    - |
-      PATH="${CI_PROJECT_DIR}/cx/node_modules/.bin:${PATH}" \
-      ./src/scripts/git_checks.ts
+    - './src/scripts/run.js git_checks'

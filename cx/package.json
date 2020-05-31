@@ -72,10 +72,10 @@
   "husky": {
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
-      "post-commit": "ts-node ./src/scripts/post_commit.ts",
-      "pre-commit": "ts-node ./src/scripts/pre_commit.ts",
-      "pre-push": "ts-node ./src/scripts/git_checks.ts",
-      "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git"
+      "post-commit": "./src/scripts/run.js post_commit",
+      "pre-commit": "./src/scripts/run.js pre_commit",
+      "pre-push": "./src/scripts/run.js git_checks",
+      "prepare-commit-msg": "./src/scripts/run.js prepare_commit_msg"
     }
   },
   "prettier": {
