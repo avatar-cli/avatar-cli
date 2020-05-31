@@ -5,7 +5,7 @@ import { join as pathJoin } from 'path'
 
 import { parse as tomlParse, stringify as tomlStringify, JsonMap } from '@iarna/toml'
 
-import { fetch as gitFetch, getCommonAncestor, getCommitMessages, getCommitHashesList, CommitMessage } from '../lib/git'
+import { fetch as gitFetch, getCommonAncestor, getCommitMessages, getCommitHashesList } from '../lib/git'
 import { getPlumberEnvVars, PlumberEnv } from '../lib/plumberEnv'
 import { getPackageJsonVersionFromCommit, computeVersion } from '../lib/version'
 import { execWithStringReturn } from '../lib/exec'
