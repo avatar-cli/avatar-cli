@@ -1,6 +1,6 @@
 {
   "name": "@avatar-cli/avatar-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Avatar-CLI",
   "author": "Andres Correa Casablanca <castarco@coderspirit.xyz>",
   "license": "GPL-3.0",
@@ -71,10 +71,11 @@
   },
   "husky": {
     "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "post-commit": "ts-node ./src/scripts/post_commit.ts",
       "pre-commit": "ts-node ./src/scripts/pre_commit.ts",
       "pre-push": "ts-node ./src/scripts/git_checks.ts",
-      "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS && ts-node ./src/scripts/pre_commit.ts --hook-commit-msg"
+      "prepare-commit-msg": "ln -fs ../.git ./.git && exec < /dev/tty && npm run git-cz -- --hook || true && unlink ./.git"
     }
   },
   "prettier": {
