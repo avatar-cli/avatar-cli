@@ -1,3 +1,6 @@
 # CI/CD
-node_modules/
-.eslintcache
+/cx/node_modules/
+/cx/.eslintcache
+
+# Build
+/target/
