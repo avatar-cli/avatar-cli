@@ -14,19 +14,22 @@ by PGP or GPG. You can read more about this topic here:
 
 ### Commit messages
 
-Commit messages must be properly formatted. The reasons behind this decision are
-many:
+Commit messages must be properly formatted (following the
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) rules).
+The reasons behind this decision are many:
   - The project's history has to be "easy" to read.
   - It's easier to extract statistics from the commit logs.
   - It's easier to generate useful changelogs.
   - This practice enforces that committers think twice about the nature of their
     contributions.
+  - Above everything else, it allows us to automate version numbering (following
+    [Semantic Versioning](https://semver.org/) rules)
 
 Because this requirement could generate too much overhead, we introduced some
 tooling to ease our lives.
 
-Running `npm install` (which requires NodeJS) configures some git hooks that
-will help the committer to generate compliant commit messages.
+Running `cd cx && npm install` (which requires NodeJS) configures some git hooks
+that will help the committer to generate compliant commit messages.
 
 ### Branch history
 
