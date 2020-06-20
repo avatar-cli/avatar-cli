@@ -6,7 +6,6 @@
 #![allow(non_snake_case)]
 
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::vec::Vec;
 

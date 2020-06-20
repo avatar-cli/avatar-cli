@@ -6,9 +6,10 @@
 
 extern crate atty;
 extern crate exitcode;
+extern crate which;
 
 use std::env;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
@@ -55,7 +56,7 @@ fn main() {
         exit(exitcode::NOINPUT)
     }
 
-    let config_lock_fd = match File::open(&config_lock_filepath) {
+    let config_lock_fd = match OpenOptions::new().read(true).write(false).open(&config_lock_filepath) {
         Ok(s) => s,
         Err(e) => match e.kind() {
             ErrorKind::NotFound => {
@@ -114,14 +115,22 @@ fn main() {
     };
 
     let mut interactive_options: Vec<&str> = Vec::new();
-    if atty::is(atty::Stream::Stdin) {
-        interactive_options.push("-i");
-    }
-    if atty::is(atty::Stream::Stdout) {
+    // TODO: Check if stdin is open
+    interactive_options.push("-i");
+
+    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
         interactive_options.push("-t")
     }
 
-    Command::new("docker")
+    let docker_client_path = match which::which("docker") {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("docker client is not available");
+            exit(exitcode::UNAVAILABLE)
+        }
+    };
+
+    Command::new(docker_client_path)
         .arg("run")
         .arg("--rm")
         .args(interactive_options)
