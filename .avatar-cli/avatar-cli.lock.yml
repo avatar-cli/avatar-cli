@@ -1,0 +1,8 @@
+---
+projectConfigHash: '0000000000000000000000000000000000000000000000000000000000000000'
+images: []
+binaries:
+  node:
+    ociImageName: 'node'
+    ociImageHash: 'e6320b0bfd0ab1484c38788b2a8b69476df0d0934b3cfd96d36a2b16ea03e0b0'
+    path: 'node'

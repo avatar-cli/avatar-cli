@@ -5,6 +5,7 @@ authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
 edition = "2018"
 
 [dependencies]
+exitcode = "1.1.2"
 serde_yaml = "0.8"
 
   [dependencies.serde]

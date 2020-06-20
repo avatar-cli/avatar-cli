@@ -4,3 +4,6 @@
 
 # Build
 /target/
+
+# Avatar-CLI
+.avatar-cli/volatile/
