@@ -4,6 +4,7 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
+extern crate atty;
 extern crate exitcode;
 
 use std::env;
@@ -14,7 +15,6 @@ use std::os::unix::process::CommandExt; // Brings trait that allows us to use ex
 use std::process::{exit, Command};
 
 mod project_config;
-
 use project_config::ProjectConfigLock;
 
 fn main() {
@@ -113,11 +113,18 @@ fn main() {
         }
     };
 
+    let mut interactive_options: Vec<&str> = Vec::new();
+    if atty::is(atty::Stream::Stdin) {
+        interactive_options.push("-i");
+    }
+    if atty::is(atty::Stream::Stdout) {
+        interactive_options.push("-t")
+    }
+
     Command::new("docker")
         .arg("run")
         .arg("--rm")
-        .arg("-i")
-        .arg("-t")
+        .args(interactive_options)
         .arg(format!(
             "{}@sha256:{}",
             binary_configuration.getOCIImageName().unpack(),
