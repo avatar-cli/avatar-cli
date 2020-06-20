@@ -9,7 +9,7 @@ extern crate exitcode;
 extern crate which;
 
 use std::env;
-use std::fs::{File, OpenOptions};
+use std::fs::read_to_string;
 use std::io::ErrorKind;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
@@ -17,6 +17,60 @@ use std::process::{exit, Command};
 
 mod project_config;
 use project_config::ProjectConfigLock;
+
+fn get_config_lock_str(config_lock_filepath: &PathBuf) -> String {
+    match read_to_string(config_lock_filepath) {
+        Ok(s) => s,
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => {
+                eprintln!(
+                    "The lock file {} is not available",
+                    config_lock_filepath.display()
+                );
+                exit(exitcode::NOINPUT)
+            }
+            ErrorKind::PermissionDenied => {
+                eprintln!(
+                    "The lock file {} is not readable due to filesystem permissions",
+                    config_lock_filepath.display()
+                );
+                exit(exitcode::IOERR)
+            }
+            _ => {
+                eprintln!(
+                    "Unknown IO error while reading the lock file {}",
+                    config_lock_filepath.display()
+                );
+                exit(exitcode::IOERR)
+            }
+        }
+    }
+}
+
+fn get_config_lock(config_lock_str: &String, config_lock_filepath: &PathBuf) -> ProjectConfigLock {
+    match serde_yaml::from_str::<ProjectConfigLock>(config_lock_str) {
+        Ok(_config_lock) => _config_lock,
+        Err(e) => {
+            let error_msg = match e.location() {
+                Some(l) => format!(
+                    "Malformed lock file '{}', line {}, column {}:\n\t{}",
+                    config_lock_filepath.display(),
+                    l.line(),
+                    l.column(),
+                    e.to_string(),
+                ),
+                None => format!(
+                    "Malformed lock file '{}':\n\t{}",
+                    config_lock_filepath.display(),
+                    e.to_string(),
+                ),
+            };
+
+            eprintln!("{}", error_msg);
+            exit(exitcode::DATAERR)
+        }
+    }
+}
 
 fn main() {
     let cmd_args: Vec<String> = env::args().collect();
@@ -55,56 +109,8 @@ fn main() {
         );
         exit(exitcode::NOINPUT)
     }
-
-    let config_lock_fd = match OpenOptions::new().read(true).write(false).open(&config_lock_filepath) {
-        Ok(s) => s,
-        Err(e) => match e.kind() {
-            ErrorKind::NotFound => {
-                eprintln!(
-                    "The lock file {} is not available",
-                    &config_lock_filepath.display()
-                );
-                exit(exitcode::NOINPUT)
-            }
-            ErrorKind::PermissionDenied => {
-                eprintln!(
-                    "The lock file {} is not readable due to filesystem permissions",
-                    &config_lock_filepath.display()
-                );
-                exit(exitcode::IOERR)
-            }
-            _ => {
-                eprintln!(
-                    "Unknown IO error while reading the lock file {}",
-                    &config_lock_filepath.display()
-                );
-                exit(exitcode::IOERR)
-            }
-        },
-    };
-
-    let config_lock = match serde_yaml::from_reader::<File, ProjectConfigLock>(config_lock_fd) {
-        Ok(_config_lock) => _config_lock,
-        Err(e) => {
-            let error_msg = match e.location() {
-                Some(l) => format!(
-                    "Malformed lock file '{}', line {}, column {}:\n\t{}",
-                    &config_lock_filepath.display(),
-                    l.line(),
-                    l.column(),
-                    e.to_string(),
-                ),
-                None => format!(
-                    "Malformed lock file '{}':\n\t{}",
-                    &config_lock_filepath.display(),
-                    e.to_string(),
-                ),
-            };
-
-            eprintln!("{}", error_msg);
-            exit(exitcode::DATAERR)
-        }
-    };
+    let config_lock_str = get_config_lock_str(&config_lock_filepath);
+    let config_lock = get_config_lock(&config_lock_str, &config_lock_filepath);
 
     let binary_configuration = match config_lock.getBinaryConfiguration(used_program_name) {
         Some(c) => c,
