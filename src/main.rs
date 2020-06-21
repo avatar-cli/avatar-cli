@@ -9,7 +9,7 @@ extern crate exitcode;
 extern crate which;
 
 use std::env;
-use std::fs::read_to_string;
+use std::fs::read;
 use std::io::ErrorKind;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
@@ -18,8 +18,16 @@ use std::process::{exit, Command};
 mod project_config;
 use project_config::ProjectConfigLock;
 
-fn get_config_lock_str(config_lock_filepath: &PathBuf) -> String {
-    match read_to_string(config_lock_filepath) {
+fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
+    if !config_lock_filepath.exists() || !config_lock_filepath.is_file() {
+        eprintln!(
+            "The lock file {} is not available",
+            &config_lock_filepath.display()
+        );
+        exit(exitcode::NOINPUT)
+    }
+
+    match read(config_lock_filepath) {
         Ok(s) => s,
         Err(e) => match e.kind() {
             ErrorKind::NotFound => {
@@ -47,8 +55,8 @@ fn get_config_lock_str(config_lock_filepath: &PathBuf) -> String {
     }
 }
 
-fn get_config_lock(config_lock_str: &String, config_lock_filepath: &PathBuf) -> ProjectConfigLock {
-    match serde_yaml::from_str::<ProjectConfigLock>(config_lock_str) {
+fn get_config_lock(config_lock_slice: &[u8], config_lock_filepath: &PathBuf) -> ProjectConfigLock {
+    match serde_yaml::from_slice::<ProjectConfigLock>(config_lock_slice) {
         Ok(_config_lock) => _config_lock,
         Err(e) => {
             let error_msg = match e.location() {
@@ -80,8 +88,7 @@ fn main() {
         );
         exit(exitcode::OSERR);
     }
-    let first_arg: &String = &cmd_args[0];
-    let used_program_name = match first_arg.split(MAIN_SEPARATOR).last() {
+    let used_program_name = match (&cmd_args[0]).split(MAIN_SEPARATOR).last() {
         Some(pname) => pname,
         None => {
             eprintln!("Due to an unknown reason, an empty first command argument was passed to this process");
@@ -102,15 +109,8 @@ fn main() {
         }
     });
 
-    if !config_lock_filepath.exists() || !config_lock_filepath.is_file() {
-        eprintln!(
-            "The lock file {} is not available",
-            &config_lock_filepath.display()
-        );
-        exit(exitcode::NOINPUT)
-    }
-    let config_lock_str = get_config_lock_str(&config_lock_filepath);
-    let config_lock = get_config_lock(&config_lock_str, &config_lock_filepath);
+    let config_lock_vec = get_config_lock_vec(&config_lock_filepath);
+    let config_lock = get_config_lock(&config_lock_vec, &config_lock_filepath);
 
     let binary_configuration = match config_lock.getBinaryConfiguration(used_program_name) {
         Some(c) => c,
