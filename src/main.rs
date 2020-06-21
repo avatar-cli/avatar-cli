@@ -11,33 +11,16 @@ extern crate which;
 use std::env;
 use std::fs::read;
 use std::io::ErrorKind;
-use std::path::{PathBuf, MAIN_SEPARATOR};
+use std::path::PathBuf;
 use std::process::exit;
 
+mod avatar_env;
 mod cmd_run;
 mod project_config;
 
+use avatar_env::{get_used_program_name, AvatarEnv};
 use cmd_run::run_docker_command;
 use project_config::ProjectConfigLock;
-
-fn get_used_program_name() -> String {
-    let first_arg = match env::args().nth(0) {
-        Some(a) => a,
-        None => {
-            eprintln!(
-                "Due to an unknown reason, it was impossible to retrieve the command arguments list"
-            );
-            exit(exitcode::OSERR);
-        }
-    };
-    match first_arg.split(MAIN_SEPARATOR).last() {
-        Some(pname) => pname,
-        None => {
-            eprintln!("Due to an unknown reason, an empty first command argument was passed to this process");
-            exit(exitcode::OSERR)
-        }
-    }.to_string()
-}
 
 fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
     if !config_lock_filepath.exists() || !config_lock_filepath.is_file() {
@@ -114,16 +97,11 @@ fn main() {
         exit(exitcode::SOFTWARE)
     }
 
-    let config_lock_filepath = PathBuf::from(match env::var("AVATAR_CLI_CONFIG_LOCK_PATH") {
-        Ok(fp) => fp,
-        Err(_) => {
-            eprintln!("The AVATAR_CLI_CONFIG_LOCK_PATH environment variable is not defined");
-            exit(exitcode::CONFIG)
-        }
-    });
+    let project_env = AvatarEnv::read();
 
-    let config_lock_vec = get_config_lock_vec(&config_lock_filepath);
-    let config_lock = get_config_lock(&config_lock_vec, &config_lock_filepath);
+    let config_lock_filepath = project_env.get_config_lock_filepath();
+    let config_lock_vec = get_config_lock_vec(config_lock_filepath);
+    let config_lock = get_config_lock(&config_lock_vec, config_lock_filepath);
 
     let binary_configuration = match config_lock.getBinaryConfiguration(&used_program_name) {
         Some(c) => c,
@@ -131,7 +109,7 @@ fn main() {
             eprintln!(
                 "Binary '{}' not properly configure in lock file '{}'",
                 used_program_name,
-                &config_lock_filepath.display()
+                config_lock_filepath.display()
             );
             exit(1)
         }
