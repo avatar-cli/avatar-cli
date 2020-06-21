@@ -84,30 +84,7 @@ fn get_config_lock(config_lock_slice: &[u8], config_lock_filepath: &PathBuf) -> 
     }
 }
 
-fn main() {
-    let used_program_name = get_used_program_name();
-    if used_program_name == "avatar" || used_program_name == "avatar-cli" {
-        println!("This code path has not been defined yet");
-
-        let the_args: Vec<String> = env::args().collect();
-        for the_arg in the_args {
-            println!("{}", the_arg);
-        }
-
-        exit(exitcode::SOFTWARE)
-    }
-
-    let project_env = AvatarEnv::read();
-
-    let current_dir = match env::current_dir() {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("Unable to get current working directory");
-            exit(exitcode::NOINPUT)
-        }
-    };
-    let project_path = project_env.get_project_path();
-
+fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) -> () {
     let mut in_project_dir = false;
     for ancestor in current_dir.ancestors() {
         if ancestor == project_path {
@@ -123,6 +100,32 @@ fn main() {
         );
         exit(exitcode::USAGE)
     }
+}
+
+fn main() {
+    let used_program_name = get_used_program_name();
+    if used_program_name == "avatar" || used_program_name == "avatar-cli" {
+        println!("This code path has not been defined yet");
+
+        let the_args: Vec<String> = env::args().collect();
+        for the_arg in the_args {
+            println!("{}", the_arg);
+        }
+
+        exit(exitcode::SOFTWARE)
+    }
+
+    let project_env = AvatarEnv::read();
+    let project_path = project_env.get_project_path();
+    let current_dir = match env::current_dir() {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("Unable to get current working directory");
+            exit(exitcode::NOINPUT)
+        }
+    };
+
+    check_if_inside_project_dir(project_path, &current_dir);
 
     let config_lock_path = project_env.get_config_lock_path();
     let config_lock_vec = get_config_lock_vec(config_lock_path);
