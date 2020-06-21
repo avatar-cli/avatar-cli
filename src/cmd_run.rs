@@ -6,6 +6,7 @@
 
 extern crate atty;
 extern crate exitcode;
+extern crate nix;
 extern crate which;
 
 use std::env;
@@ -35,6 +36,10 @@ pub(crate) fn run_docker_command(
     Command::new(docker_client_path)
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
+        .args(&[
+            "--user",
+            &format!("{}:{}", nix::unistd::getuid(), nix::unistd::getgid()),
+        ])
         .args(&[
             "--mount",
             &format!(
