@@ -81,7 +81,7 @@ impl ImageBinaryConfigLock {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfigLock {
     projectConfigHash: String,
-    images: HashMap<String, HashMap<String, String>>,  // image_name -> image_tag -> image_hash
+    images: HashMap<String, HashMap<String, String>>, // image_name -> image_tag -> image_hash
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }
 

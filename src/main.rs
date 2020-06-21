@@ -11,12 +11,33 @@ extern crate which;
 use std::env;
 use std::fs::read;
 use std::io::ErrorKind;
-use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::path::{PathBuf, MAIN_SEPARATOR};
-use std::process::{exit, Command};
+use std::process::exit;
 
+mod cmd_run;
 mod project_config;
+
+use cmd_run::run_docker_command;
 use project_config::ProjectConfigLock;
+
+fn get_used_program_name() -> String {
+    let first_arg = match env::args().nth(0) {
+        Some(a) => a,
+        None => {
+            eprintln!(
+                "Due to an unknown reason, it was impossible to retrieve the command arguments list"
+            );
+            exit(exitcode::OSERR);
+        }
+    };
+    match first_arg.split(MAIN_SEPARATOR).last() {
+        Some(pname) => pname,
+        None => {
+            eprintln!("Due to an unknown reason, an empty first command argument was passed to this process");
+            exit(exitcode::OSERR)
+        }
+    }.to_string()
+}
 
 fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
     if !config_lock_filepath.exists() || !config_lock_filepath.is_file() {
@@ -81,23 +102,15 @@ fn get_config_lock(config_lock_slice: &[u8], config_lock_filepath: &PathBuf) -> 
 }
 
 fn main() {
-    let cmd_args: Vec<String> = env::args().collect();
-    if cmd_args.is_empty() {
-        eprintln!(
-            "Due to an unknown reason, it was impossible to retrieve the command arguments list"
-        );
-        exit(exitcode::OSERR);
-    }
-    let used_program_name = match (&cmd_args[0]).split(MAIN_SEPARATOR).last() {
-        Some(pname) => pname,
-        None => {
-            eprintln!("Due to an unknown reason, an empty first command argument was passed to this process");
-            exit(exitcode::OSERR)
-        }
-    };
-
+    let used_program_name = get_used_program_name();
     if used_program_name == "avatar" || used_program_name == "avatar-cli" {
         println!("This code path has not been defined yet");
+
+        let the_args: Vec<String> = env::args().collect();
+        for the_arg in the_args {
+            println!("{}", the_arg);
+        }
+
         exit(exitcode::SOFTWARE)
     }
 
@@ -112,7 +125,7 @@ fn main() {
     let config_lock_vec = get_config_lock_vec(&config_lock_filepath);
     let config_lock = get_config_lock(&config_lock_vec, &config_lock_filepath);
 
-    let binary_configuration = match config_lock.getBinaryConfiguration(used_program_name) {
+    let binary_configuration = match config_lock.getBinaryConfiguration(&used_program_name) {
         Some(c) => c,
         None => {
             eprintln!(
@@ -124,32 +137,5 @@ fn main() {
         }
     };
 
-    let mut interactive_options: Vec<&str> = Vec::new();
-    // TODO: Check if stdin is open
-    interactive_options.push("-i");
-
-    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
-        interactive_options.push("-t")
-    }
-
-    let docker_client_path = match which::which("docker") {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("docker client is not available");
-            exit(exitcode::UNAVAILABLE)
-        }
-    };
-
-    Command::new(docker_client_path)
-        .arg("run")
-        .arg("--rm")
-        .args(interactive_options)
-        .arg(format!(
-            "{}@sha256:{}",
-            binary_configuration.getOCIImageName(),
-            binary_configuration.getOCIImageHash()
-        ))
-        .arg(binary_configuration.getPath())
-        .args(env::args().skip(1))
-        .exec(); // Only for UNIX
+    run_docker_command(binary_configuration);
 }
