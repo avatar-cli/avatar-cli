@@ -12,15 +12,13 @@ use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::process::{exit, Command};
 
+use super::avatar_env::AvatarEnv;
 use super::project_config::ImageBinaryConfigLock;
 
-pub(crate) fn run_docker_command(binary_configuration: &ImageBinaryConfigLock) -> () {
-    let mut interactive_options: Vec<&str> = vec!["-i"]; // TODO: Check if stdin is open
-
-    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
-        interactive_options.push("-t")
-    }
-
+pub(crate) fn run_docker_command(
+    project_env: AvatarEnv,
+    binary_configuration: &ImageBinaryConfigLock,
+) -> () {
     let docker_client_path = match which::which("docker") {
         Ok(p) => p,
         Err(_) => {
@@ -29,9 +27,21 @@ pub(crate) fn run_docker_command(binary_configuration: &ImageBinaryConfigLock) -
         }
     };
 
+    let mut interactive_options: Vec<&str> = vec!["-i"]; // TODO: Check if stdin is open
+    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
+        interactive_options.push("-t")
+    }
+
     Command::new(docker_client_path)
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
+        .args(&[
+            "--mount",
+            &format!(
+                "type=bind,source={},target=/playground",
+                project_env.get_project_path().display() // TODO: Escape commas?
+            ),
+        ])
         .arg(format!(
             "{}@sha256:{}",
             binary_configuration.getOCIImageName(),
