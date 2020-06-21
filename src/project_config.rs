@@ -43,69 +43,33 @@ pub(crate) struct OCIImageConfig {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct ProjectConfigVersion(String);
-
-impl ProjectConfigVersion {
-    pub fn unpack(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct OCIImageHash(String);
-
-impl OCIImageHash {
-    pub fn unpack(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct ProjectConfigHash(String);
-
-impl ProjectConfigHash {
-    pub fn unpack(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfig {
-    version: ProjectConfigVersion,
+    version: String,
     images: Option<Vec<OCIImageConfig>>,
 }
 
 // -----------------------------------------------------------------------------
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct UntaggedImageName(String);
-
-impl UntaggedImageName {
-    pub fn unpack(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct OCIImageConfigLock {
-    name: UntaggedImageName,
-    hash: OCIImageHash,
+    name: String,
+    hash: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ImageBinaryConfigLock {
-    ociImageName: UntaggedImageName,
-    ociImageHash: OCIImageHash,
+    ociImageName: String,
+    ociImageHash: String,
     path: PathBuf,
     runConfig: Option<OCIContainerRunConfig>,
 }
 
 impl ImageBinaryConfigLock {
-    pub fn getOCIImageName(&self) -> &UntaggedImageName {
+    pub fn getOCIImageName(&self) -> &String {
         &self.ociImageName
     }
 
-    pub fn getOCIImageHash(&self) -> &OCIImageHash {
+    pub fn getOCIImageHash(&self) -> &String {
         &self.ociImageHash
     }
 
@@ -116,7 +80,7 @@ impl ImageBinaryConfigLock {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfigLock {
-    projectConfigHash: ProjectConfigHash,
+    projectConfigHash: String,
     images: Vec<OCIImageConfigLock>,
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }

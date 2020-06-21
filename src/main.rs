@@ -142,8 +142,8 @@ fn main() {
         .args(interactive_options)
         .arg(format!(
             "{}@sha256:{}",
-            binary_configuration.getOCIImageName().unpack(),
-            binary_configuration.getOCIImageHash().unpack()
+            binary_configuration.getOCIImageName(),
+            binary_configuration.getOCIImageHash()
         ))
         .arg(binary_configuration.getPath())
         .args(env::args().skip(1))
