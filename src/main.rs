@@ -99,9 +99,34 @@ fn main() {
 
     let project_env = AvatarEnv::read();
 
-    let config_lock_filepath = project_env.get_config_lock_filepath();
-    let config_lock_vec = get_config_lock_vec(config_lock_filepath);
-    let config_lock = get_config_lock(&config_lock_vec, config_lock_filepath);
+    let current_dir = match env::current_dir() {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("Unable to get current working directory");
+            exit(exitcode::NOINPUT)
+        }
+    };
+    let project_path = project_env.get_project_path();
+
+    let mut in_project_dir = false;
+    for ancestor in current_dir.ancestors() {
+        if ancestor == project_path {
+            in_project_dir = true;
+            break;
+        }
+    }
+    if !in_project_dir {
+        eprintln!(
+            "The configured project directory is '{}', but you are in '{}'",
+            project_path.display(),
+            current_dir.display()
+        );
+        exit(exitcode::USAGE)
+    }
+
+    let config_lock_path = project_env.get_config_lock_path();
+    let config_lock_vec = get_config_lock_vec(config_lock_path);
+    let config_lock = get_config_lock(&config_lock_vec, config_lock_path);
 
     let binary_configuration = match config_lock.getBinaryConfiguration(&used_program_name) {
         Some(c) => c,
@@ -109,7 +134,7 @@ fn main() {
             eprintln!(
                 "Binary '{}' not properly configure in lock file '{}'",
                 used_program_name,
-                config_lock_filepath.display()
+                config_lock_path.display()
             );
             exit(1)
         }

@@ -5,8 +5,8 @@ use std::process::exit;
 pub(crate) struct AvatarEnv {
     session_token: String,
     project_path: PathBuf,
-    config_filepath: PathBuf,
-    config_lock_filepath: PathBuf,
+    config_path: PathBuf,
+    config_lock_path: PathBuf,
 }
 
 impl AvatarEnv {
@@ -14,8 +14,8 @@ impl AvatarEnv {
         Self {
             session_token: Self::get_var("AVATAR_CLI_SESSION_TOKEN"),
             project_path: PathBuf::from(Self::get_var("AVATAR_CLI_PROJECT_PATH")),
-            config_filepath: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_PATH")),
-            config_lock_filepath: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_LOCK_PATH")),
+            config_path: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_PATH")),
+            config_lock_path: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_LOCK_PATH")),
         }
     }
 
@@ -27,12 +27,12 @@ impl AvatarEnv {
         &self.project_path
     }
 
-    pub fn get_config_filepath(&self) -> &PathBuf {
-        &self.config_filepath
+    pub fn get_config_path(&self) -> &PathBuf {
+        &self.config_path
     }
 
-    pub fn get_config_lock_filepath(&self) -> &PathBuf {
-        &self.config_lock_filepath
+    pub fn get_config_lock_path(&self) -> &PathBuf {
+        &self.config_lock_path
     }
 
     fn get_var(var_name: &str) -> String {
