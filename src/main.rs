@@ -11,8 +11,8 @@ extern crate which;
 use std::env;
 use std::fs::read;
 use std::io::ErrorKind;
-use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
+use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::process::{exit, Command};
 
 mod project_config;
@@ -51,7 +51,7 @@ fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
                 );
                 exit(exitcode::IOERR)
             }
-        }
+        },
     }
 }
 
@@ -115,7 +115,11 @@ fn main() {
     let binary_configuration = match config_lock.getBinaryConfiguration(used_program_name) {
         Some(c) => c,
         None => {
-            eprintln!("Binary '{}' not properly configure in lock file '{}'", used_program_name, &config_lock_filepath.display());
+            eprintln!(
+                "Binary '{}' not properly configure in lock file '{}'",
+                used_program_name,
+                &config_lock_filepath.display()
+            );
             exit(1)
         }
     };

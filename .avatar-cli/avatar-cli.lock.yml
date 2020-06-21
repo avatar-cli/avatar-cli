@@ -1,6 +1,6 @@
 ---
 projectConfigHash: '0000000000000000000000000000000000000000000000000000000000000000'
-images: []
+images: {}
 binaries:
   node:
     ociImageName: 'node'
