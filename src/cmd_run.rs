@@ -11,6 +11,7 @@ extern crate which;
 
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
+use std::path::PathBuf;
 use std::process::{exit, Command};
 
 use super::avatar_env::AvatarEnv;
@@ -19,6 +20,7 @@ use super::project_config::ImageBinaryConfigLock;
 pub(crate) fn run_docker_command(
     project_env: AvatarEnv,
     binary_configuration: &ImageBinaryConfigLock,
+    current_dir: PathBuf,
 ) -> () {
     let docker_client_path = match which::which("docker") {
         Ok(p) => p,
@@ -33,19 +35,28 @@ pub(crate) fn run_docker_command(
         interactive_options.push("-t")
     }
 
+    let project_path = project_env.get_project_path();
+    let working_dir = match current_dir.strip_prefix(project_path) {
+        Ok(wd) => wd,
+        Err(_) => {
+            eprintln!("A precondition of run_docker_command does not hold: working directory inside project directory");
+            exit(exitcode::SOFTWARE)
+        }
+    };
+
     Command::new(docker_client_path)
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
         .args(&[
             "--user",
             &format!("{}:{}", nix::unistd::getuid(), nix::unistd::getgid()),
-        ])
-        .args(&[
             "--mount",
             &format!(
                 "type=bind,source={},target=/playground",
-                project_env.get_project_path().display() // TODO: Escape commas?
+                project_path.display() // TODO: Escape commas?
             ),
+            "--workdir",
+            &format!("/playground/{}", working_dir.display()),
         ])
         .arg(format!(
             "{}@sha256:{}",

@@ -143,5 +143,5 @@ fn main() {
         }
     };
 
-    run_docker_command(project_env, binary_configuration);
+    run_docker_command(project_env, binary_configuration, current_dir);
 }
