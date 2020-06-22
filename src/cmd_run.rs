@@ -4,20 +4,20 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-extern crate atty;
-extern crate exitcode;
-extern crate nix;
-extern crate which;
-
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::path::PathBuf;
 use std::process::{exit, Command};
 
-use super::avatar_env::AvatarEnv;
-use super::project_config::ImageBinaryConfigLock;
+extern crate atty;
+extern crate exitcode;
+extern crate nix;
+extern crate which;
 
-pub(crate) fn run_docker_command(
+use super::avatar_env::AvatarEnv;
+use super::project_config::{get_config_lock, get_config_lock_vec, ImageBinaryConfigLock};
+
+fn run_docker_command(
     project_env: AvatarEnv,
     binary_configuration: &ImageBinaryConfigLock,
     current_dir: PathBuf,
@@ -66,4 +66,54 @@ pub(crate) fn run_docker_command(
         .arg(binary_configuration.getPath())
         .args(env::args().skip(1))
         .exec(); // Only for UNIX
+}
+
+fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) -> () {
+    let mut in_project_dir = false;
+    for ancestor in current_dir.ancestors() {
+        if ancestor == project_path {
+            in_project_dir = true;
+            break;
+        }
+    }
+    if !in_project_dir {
+        eprintln!(
+            "The configured project directory is '{}', but you are in '{}'",
+            project_path.display(),
+            current_dir.display()
+        );
+        exit(exitcode::USAGE)
+    }
+}
+
+pub(crate) fn run_in_subshell_mode(used_program_name: String) -> () {
+    let project_env = AvatarEnv::read();
+    let project_path = project_env.get_project_path();
+    let current_dir = match env::current_dir() {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("Unable to get current working directory");
+            exit(exitcode::NOINPUT)
+        }
+    };
+
+    check_if_inside_project_dir(project_path, &current_dir);
+
+    let config_lock_path = project_env.get_config_lock_path();
+    let config_lock_vec = get_config_lock_vec(config_lock_path);
+    let config_lock = get_config_lock(&config_lock_vec, config_lock_path);
+
+    let binary_configuration = match config_lock.getBinaryConfiguration(&used_program_name) {
+        Some(c) => c,
+        None => {
+            eprintln!(
+                "Binary '{}' not properly configure in lock file '{}'",
+                used_program_name,
+                config_lock_path.display()
+            );
+            exit(1)
+        }
+    };
+
+    run_docker_command(project_env, binary_configuration, current_dir);
 }
