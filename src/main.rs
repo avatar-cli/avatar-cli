@@ -102,19 +102,18 @@ fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) ->
     }
 }
 
-fn main() {
-    let used_program_name = get_used_program_name();
-    if used_program_name == "avatar" || used_program_name == "avatar-cli" {
-        println!("This code path has not been defined yet");
+fn run_in_subcommand_mode() -> () {
+    println!("This code path has not been defined yet");
 
-        let the_args: Vec<String> = env::args().collect();
-        for the_arg in the_args {
-            println!("{}", the_arg);
-        }
-
-        exit(exitcode::SOFTWARE)
+    let the_args: Vec<String> = env::args().collect();
+    for the_arg in the_args {
+        println!("{}", the_arg);
     }
 
+    exit(exitcode::SOFTWARE)
+}
+
+fn run_in_subshell_mode(used_program_name: String) -> () {
     let project_env = AvatarEnv::read();
     let project_path = project_env.get_project_path();
     let current_dir = match env::current_dir() {
@@ -144,4 +143,13 @@ fn main() {
     };
 
     run_docker_command(project_env, binary_configuration, current_dir);
+}
+
+fn main() {
+    let used_program_name = get_used_program_name();
+    if used_program_name == "avatar" || used_program_name == "avatar-cli" {
+        run_in_subcommand_mode()
+    } else {
+        run_in_subshell_mode(used_program_name)
+    }
 }
