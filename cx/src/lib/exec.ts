@@ -1,34 +1,14 @@
 import { promisify } from 'util'
-import { exec as cbExec } from 'child_process'
+import { exec as _exec } from 'child_process'
 
-const exec = promisify(cbExec)
+const exec = promisify(_exec)
 
-async function execWithStringReturn(
-  command: string,
-  env?: NodeJS.ProcessEnv | null,
-  mergeEnvs = true
-): Promise<string> {
-  const commandEnv = mergeEnvs ? { ...process.env, ...(env ?? {}) } : env ?? process.env
-  try {
-    const { stdout } = await exec(command, { env: commandEnv })
-    return stdout
-  } catch (reason) {
-    if (reason?.stdout) {
-      console.log(reason.stdout.toString())
-    }
-    if (reason?.stderr) {
-      console.error(reason.stderr.toString())
-    }
-    throw reason
-  }
+export async function cxExec(command: string, env?: NodeJS.ProcessEnv): Promise<string> {
+  const _env = { ...process.env, ...(env ?? {}) }
+  const { stdout } = await exec(command, { env: _env })
+  return stdout
 }
 
-async function cleanExecWithStringReturn(
-  command: string,
-  env?: NodeJS.ProcessEnv | null,
-  mergeEnvs = true
-): Promise<string> {
-  return (await execWithStringReturn(command, env, mergeEnvs)).trim()
+export async function trimmedCxExec(command: string, env?: NodeJS.ProcessEnv): Promise<string> {
+  return (await cxExec(command, env)).trim()
 }
-
-export { execWithStringReturn, cleanExecWithStringReturn }

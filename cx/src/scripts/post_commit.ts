@@ -1,11 +1,11 @@
 #!/usr/bin/env ts-node-script
 
 import { join as pathJoin } from 'path'
-import { execWithStringReturn } from '../lib/exec'
+import { cxExec } from '../lib/exec'
 
 async function run(): Promise<void> {
   const preCommitScriptPath = pathJoin(__dirname, 'pre_commit.ts')
-  const preCommitOutput = await execWithStringReturn(`ts-node ${preCommitScriptPath}`)
+  const preCommitOutput = await cxExec(`ts-node ${preCommitScriptPath}`)
 
   if (!preCommitOutput.match(/Updated/)) {
     return
@@ -14,8 +14,9 @@ async function run(): Promise<void> {
   const packageJsonPath = pathJoin(__dirname, '..', '..', 'package.json')
   const cargoTomlPath = pathJoin(__dirname, '..', '..', '..', 'Cargo.toml')
 
-  await execWithStringReturn(`git commit --no-verify --amend -C HEAD ${packageJsonPath} ${cargoTomlPath}`, {
+  await cxExec(`git commit --no-verify --amend -C HEAD ${packageJsonPath} ${cargoTomlPath}`, {
     SKIP_PREPARE_COMMIT_MSG: '1',
+    FROM_POSTCOMMIT_HOOK: '1',
   })
   console.log('Updated previous commit to use the correct package version')
 }

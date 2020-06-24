@@ -1,13 +1,13 @@
 #!/usr/bin/env ts-node-script
 
-import { getPlumberEnvVars } from '../lib/plumberEnv'
+import { getCxEnvVars } from '../lib/cxEnv'
 import { fetch as gitFetch, getCommonAncestor, getCommitHashesList, checkIfSigned, getCommitMessages } from '../lib/git'
-import { execWithStringReturn } from '../lib/exec'
+import { cxExec } from '../lib/exec'
 import { getPackageJsonVersionFromCommit, getCargoTomlVersionFromCommit, computeVersion } from '../lib/version'
 
 async function checkCommitMessages(commonAncestor: string): Promise<void> {
   console.log('Validating commit messages')
-  await execWithStringReturn(`npm run commitlint -- --from ${commonAncestor}`)
+  await cxExec(`npm run commitlint -- --from ${commonAncestor}`)
 }
 
 async function checkCommitSignatures(commitsList: string[]): Promise<void> {
@@ -46,17 +46,17 @@ async function checkVersions(ancestorGitRef: string, currentGitRef: string, comm
 }
 
 async function run(): Promise<void> {
-  const env = await getPlumberEnvVars()
+  const env = await getCxEnvVars()
 
   // We do this so we can "compare" branches
   await gitFetch()
 
-  const commonAncestor = await getCommonAncestor(env.PLUMBER_GIT_MASTER_REF, env.CI_COMMIT_SHA)
-  const commitHashes = await getCommitHashesList(commonAncestor, env.CI_COMMIT_SHA)
+  const commonAncestor = await getCommonAncestor(env.CX_GIT_MASTER_REF, env.CX_GIT_COMMIT_HASH)
+  const commitHashes = await getCommitHashesList(commonAncestor, env.CX_GIT_COMMIT_HASH)
 
   await checkCommitMessages(commonAncestor)
   await checkCommitSignatures(commitHashes)
-  await checkVersions(commonAncestor, env.CI_COMMIT_SHA, commitHashes)
+  await checkVersions(commonAncestor, env.CX_GIT_COMMIT_HASH, commitHashes)
 }
 
 run()
