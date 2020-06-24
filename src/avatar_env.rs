@@ -8,6 +8,11 @@ use std::env;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::process::exit;
 
+pub(crate) const SESSION_TOKEN: &str = "AVATAR_CLI_SESSION_TOKEN";
+pub(crate) const PROJECT_PATH: &str = "AVATAR_CLI_PROJECT_PATH";
+pub(crate) const CONFIG_PATH: &str = "AVATAR_CLI_CONFIG_PATH";
+pub(crate) const CONFIG_LOCK_PATH: &str = "AVATAR_CLI_CONFIG_LOCK_PATH";
+
 pub(crate) struct AvatarEnv {
     session_token: String,
     project_path: PathBuf,
@@ -18,10 +23,10 @@ pub(crate) struct AvatarEnv {
 impl AvatarEnv {
     pub fn read() -> Self {
         Self {
-            session_token: Self::get_var("AVATAR_CLI_SESSION_TOKEN"),
-            project_path: PathBuf::from(Self::get_var("AVATAR_CLI_PROJECT_PATH")),
-            config_path: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_PATH")),
-            config_lock_path: PathBuf::from(Self::get_var("AVATAR_CLI_CONFIG_LOCK_PATH")),
+            session_token: Self::get_var(SESSION_TOKEN),
+            project_path: PathBuf::from(Self::get_var(PROJECT_PATH)),
+            config_path: PathBuf::from(Self::get_var(CONFIG_PATH)),
+            config_lock_path: PathBuf::from(Self::get_var(CONFIG_LOCK_PATH)),
         }
     }
 

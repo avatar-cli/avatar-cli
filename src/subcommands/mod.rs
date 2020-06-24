@@ -4,14 +4,14 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
+pub(crate) mod shell;
+
 use std::process::exit;
 
 extern crate clap;
 use clap::{App, AppSettings, SubCommand};
 
-pub(crate) fn run_in_subcommand_mode() -> () {
-    println!("This code path has not been defined yet");
-
+pub(crate) fn select() -> () {
     let matches = App::new("avatar")
         .setting(AppSettings::SubcommandRequired)
         .subcommand(
@@ -28,8 +28,11 @@ pub(crate) fn run_in_subcommand_mode() -> () {
         Some(subcommand_name) => match subcommand_name {
             "avatar" => exit(exitcode::OK),
             "avatar-cli" => exit(exitcode::OK),
-            "run" => {}
-            "shell" => {}
+            "run" => {
+                eprintln!("Code path not yet defined");
+                exit(exitcode::SOFTWARE)
+            }
+            "shell" => shell::shell_subcommand(),
             _ => {
                 eprintln!("Invalid subcommand");
                 exit(exitcode::USAGE)

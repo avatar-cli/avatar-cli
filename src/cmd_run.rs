@@ -14,8 +14,9 @@ extern crate exitcode;
 extern crate nix;
 extern crate which;
 
-use super::avatar_env::AvatarEnv;
-use super::project_config::{get_config_lock, get_config_lock_vec, ImageBinaryConfigLock};
+use crate::avatar_env::AvatarEnv;
+use crate::directories::check_if_inside_project_dir;
+use crate::project_config::{get_config_lock, get_config_lock_vec, ImageBinaryConfigLock};
 
 fn run_docker_command(
     project_env: AvatarEnv,
@@ -66,24 +67,6 @@ fn run_docker_command(
         .arg(binary_configuration.getPath())
         .args(env::args().skip(1))
         .exec(); // Only for UNIX
-}
-
-fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) -> () {
-    let mut in_project_dir = false;
-    for ancestor in current_dir.ancestors() {
-        if ancestor == project_path {
-            in_project_dir = true;
-            break;
-        }
-    }
-    if !in_project_dir {
-        eprintln!(
-            "The configured project directory is '{}', but you are in '{}'",
-            project_path.display(),
-            current_dir.display()
-        );
-        exit(exitcode::USAGE)
-    }
 }
 
 pub(crate) fn run_in_subshell_mode(used_program_name: String) -> () {
