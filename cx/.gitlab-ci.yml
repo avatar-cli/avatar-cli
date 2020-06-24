@@ -13,4 +13,4 @@ boilerplate_checks:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
     - 'npm run lint'
-    - './src/scripts/run.js git_checks'
+    - './node_modules/.bin/ts-node ./src/scripts/git_checks.ts'
