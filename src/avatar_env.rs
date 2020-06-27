@@ -8,34 +8,29 @@ use std::env;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use std::process::exit;
 
-pub(crate) const SESSION_TOKEN: &str = "AVATAR_CLI_SESSION_TOKEN";
-pub(crate) const PROJECT_PATH: &str = "AVATAR_CLI_PROJECT_PATH";
-pub(crate) const CONFIG_PATH: &str = "AVATAR_CLI_CONFIG_PATH";
 pub(crate) const CONFIG_LOCK_PATH: &str = "AVATAR_CLI_CONFIG_LOCK_PATH";
+pub(crate) const CONFIG_PATH: &str = "AVATAR_CLI_CONFIG_PATH";
+pub(crate) const PROJECT_PATH: &str = "AVATAR_CLI_PROJECT_PATH";
+pub(crate) const SESSION_TOKEN: &str = "AVATAR_CLI_SESSION_TOKEN";
+pub(crate) const STATE_PATH: &str = "AVATAR_CLI_STATE_PATH";
 
 pub(crate) struct AvatarEnv {
-    session_token: String,
-    project_path: PathBuf,
     config_path: PathBuf,
     config_lock_path: PathBuf,
+    project_path: PathBuf,
+    session_token: String,
+    state_path: PathBuf,
 }
 
 impl AvatarEnv {
     pub fn read() -> Self {
         Self {
-            session_token: Self::get_var(SESSION_TOKEN),
-            project_path: PathBuf::from(Self::get_var(PROJECT_PATH)),
             config_path: PathBuf::from(Self::get_var(CONFIG_PATH)),
             config_lock_path: PathBuf::from(Self::get_var(CONFIG_LOCK_PATH)),
+            project_path: PathBuf::from(Self::get_var(PROJECT_PATH)),
+            session_token: Self::get_var(SESSION_TOKEN),
+            state_path: PathBuf::from(Self::get_var(STATE_PATH)),
         }
-    }
-
-    pub fn get_session_token(&self) -> &String {
-        &self.session_token
-    }
-
-    pub fn get_project_path(&self) -> &PathBuf {
-        &self.project_path
     }
 
     pub fn get_config_path(&self) -> &PathBuf {
@@ -44,6 +39,18 @@ impl AvatarEnv {
 
     pub fn get_config_lock_path(&self) -> &PathBuf {
         &self.config_lock_path
+    }
+
+    pub fn get_project_path(&self) -> &PathBuf {
+        &self.project_path
+    }
+
+    pub fn get_session_token(&self) -> &String {
+        &self.session_token
+    }
+
+    pub fn get_state_path(&self) -> &PathBuf {
+        &self.state_path
     }
 
     fn get_var(var_name: &str) -> String {

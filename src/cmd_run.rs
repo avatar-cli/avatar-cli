@@ -82,6 +82,7 @@ pub(crate) fn run_in_subshell_mode(used_program_name: String) -> () {
 
     check_if_inside_project_dir(project_path, &current_dir);
 
+    // TODO: should read the volatile/state.yml file instead of avatar-cli.lock.yml
     let config_lock_path = project_env.get_config_lock_path();
     let config_lock_vec = get_config_lock_vec(config_lock_path);
     let config_lock = get_config_lock(&config_lock_vec, config_lock_path);

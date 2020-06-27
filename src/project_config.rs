@@ -89,6 +89,10 @@ pub(crate) struct ProjectConfigLock {
 }
 
 impl ProjectConfigLock {
+    pub fn getProjectConfigHash(&self) -> &str {
+        &self.projectConfigHash
+    }
+
     pub fn getBinaryConfiguration(&self, binary_name: &str) -> Option<&ImageBinaryConfigLock> {
         self.binaries.get(binary_name)
     }
