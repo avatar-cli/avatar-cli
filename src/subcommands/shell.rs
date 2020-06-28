@@ -10,15 +10,12 @@ use std::process::{exit, Command};
 
 extern crate exitcode;
 extern crate rand;
-extern crate ring;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-use ring::digest::{digest, SHA256};
-use ring::test::from_hex;
 
 use crate::avatar_env::{CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_PATH, SESSION_TOKEN, STATE_PATH};
 use crate::directories::get_project_path;
-use crate::project_config::{get_config_lock, get_config_lock_vec};
+use crate::project_config::{get_config, get_config_lock};
 
 pub(crate) fn shell_subcommand() -> () {
     if let Ok(session_token) = env::var(SESSION_TOKEN) {
@@ -52,24 +49,21 @@ pub(crate) fn shell_subcommand() -> () {
     let config_path = project_path.join(".avatar-cli").join("avatar-cli.yml");
     // We do not check again if config_path exists, since it was implicitly checked by `get_project_path`.
 
-    let project_state_bytes = get_config_lock_vec(&project_state_path);
-    let config_lock_bytes = get_config_lock_vec(&config_lock_path);
+    let (_, config_hash) = get_config(&config_path);
+    let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
 
-    let project_state = get_config_lock(&project_state_bytes, &project_state_path);
-    let config_lock_hash = digest(&SHA256, &config_lock_bytes);
+    if &config_hash.as_ref() != &&config_lock.getProjectConfigHash()[..] {
+        eprintln!(
+            "The hash for the file '{}' does not match with the one in '{}'",
+            config_path.display(),
+            config_lock_path.display()
+        );
+        exit(exitcode::DATAERR) // TODO: Update config_lock & state instead of stopping the process
+    }
 
-    let hash_from_state = match from_hex(project_state.getProjectConfigHash()) {
-        Ok(h) => h,
-        Err(_) => {
-            eprintln!(
-                "Unable to read the config lock hash from the '{}' file",
-                project_state_path.display()
-            );
-            exit(exitcode::DATAERR)
-        }
-    };
+    let (project_state, _) = get_config_lock(&project_state_path);
 
-    if &config_lock_hash.as_ref() != &&hash_from_state[..] {
+    if &config_lock_hash.as_ref() != &&project_state.getProjectConfigHash()[..] {
         eprintln!(
             "The hash for the file '{}' does not match with the one in '{}'",
             config_lock_path.display(),

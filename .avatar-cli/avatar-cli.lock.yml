@@ -1,6 +1,8 @@
 ---
-projectConfigHash: '0000000000000000000000000000000000000000000000000000000000000000'
-images: {}
+projectConfigHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+images:
+  node:
+    14-buster: 'e6320b0bfd0ab1484c38788b2a8b69476df0d0934b3cfd96d36a2b16ea03e0b0'
 binaries:
   node:
     ociImageName: 'node'

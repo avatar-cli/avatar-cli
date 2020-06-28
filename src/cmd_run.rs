@@ -14,9 +14,9 @@ extern crate exitcode;
 extern crate nix;
 extern crate which;
 
-use crate::avatar_env::AvatarEnv;
+use crate::avatar_env::{AvatarEnv, SESSION_TOKEN};
 use crate::directories::check_if_inside_project_dir;
-use crate::project_config::{get_config_lock, get_config_lock_vec, ImageBinaryConfigLock};
+use crate::project_config::{get_config_lock, ImageBinaryConfigLock};
 
 fn run_docker_command(
     project_env: AvatarEnv,
@@ -49,6 +49,8 @@ fn run_docker_command(
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
         .args(&[
+            "--env",
+            &format!("{}={}", SESSION_TOKEN, project_env.get_session_token()),
             "--user",
             &format!("{}:{}", nix::unistd::getuid(), nix::unistd::getgid()),
             "--mount",
@@ -82,18 +84,18 @@ pub(crate) fn run_in_subshell_mode(used_program_name: String) -> () {
 
     check_if_inside_project_dir(project_path, &current_dir);
 
-    // TODO: should read the volatile/state.yml file instead of avatar-cli.lock.yml
-    let config_lock_path = project_env.get_config_lock_path();
-    let config_lock_vec = get_config_lock_vec(config_lock_path);
-    let config_lock = get_config_lock(&config_lock_vec, config_lock_path);
+    let state_path = project_env.get_state_path();
+    let (project_state, _) = get_config_lock(state_path);
 
-    let binary_configuration = match config_lock.getBinaryConfiguration(&used_program_name) {
+    // TODO: Should we validate the checksums too?
+
+    let binary_configuration = match project_state.getBinaryConfiguration(&used_program_name) {
         Some(c) => c,
         None => {
             eprintln!(
                 "Binary '{}' not properly configure in lock file '{}'",
                 used_program_name,
-                config_lock_path.display()
+                state_path.display()
             );
             exit(1)
         }

@@ -14,6 +14,10 @@ use std::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 
+extern crate ring;
+use ring::digest::{digest, Digest, SHA256};
+use ring::test::from_hex;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct VolumeConfig {
     containerPath: PathBuf,
@@ -83,13 +87,14 @@ impl ImageBinaryConfigLock {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfigLock {
-    projectConfigHash: String,
+    #[serde(with = "hex")]
+    projectConfigHash: Vec<u8>,
     images: HashMap<String, HashMap<String, String>>, // image_name -> image_tag -> image_hash
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }
 
 impl ProjectConfigLock {
-    pub fn getProjectConfigHash(&self) -> &str {
+    pub fn getProjectConfigHash(&self) -> &Vec<u8> {
         &self.projectConfigHash
     }
 
@@ -101,36 +106,30 @@ impl ProjectConfigLock {
 // Functions:
 // -----------------------------------------------------------------------------
 
-pub(crate) fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
-    if !config_lock_filepath.exists() || !config_lock_filepath.is_file() {
-        eprintln!(
-            "The lock file {} is not available",
-            &config_lock_filepath.display()
-        );
+fn get_file_bytes(filepath: &PathBuf) -> Vec<u8> {
+    if !filepath.exists() || !filepath.is_file() {
+        eprintln!("The file {} is not available", &filepath.display());
         exit(exitcode::NOINPUT)
     }
 
-    match read(config_lock_filepath) {
+    match read(filepath) {
         Ok(s) => s,
         Err(e) => match e.kind() {
             ErrorKind::NotFound => {
-                eprintln!(
-                    "The lock file {} is not available",
-                    config_lock_filepath.display()
-                );
+                eprintln!("The file {} is not available", filepath.display());
                 exit(exitcode::NOINPUT)
             }
             ErrorKind::PermissionDenied => {
                 eprintln!(
-                    "The lock file {} is not readable due to filesystem permissions",
-                    config_lock_filepath.display()
+                    "The file {} is not readable due to filesystem permissions",
+                    filepath.display()
                 );
                 exit(exitcode::IOERR)
             }
             _ => {
                 eprintln!(
-                    "Unknown IO error while reading the lock file {}",
-                    config_lock_filepath.display()
+                    "Unknown IO error while reading the file {}",
+                    filepath.display()
                 );
                 exit(exitcode::IOERR)
             }
@@ -138,30 +137,36 @@ pub(crate) fn get_config_lock_vec(config_lock_filepath: &PathBuf) -> Vec<u8> {
     }
 }
 
-pub(crate) fn get_config_lock(
-    config_lock_slice: &[u8],
-    config_lock_filepath: &PathBuf,
-) -> ProjectConfigLock {
-    match serde_yaml::from_slice::<ProjectConfigLock>(config_lock_slice) {
-        Ok(_config_lock) => _config_lock,
-        Err(e) => {
-            let error_msg = match e.location() {
-                Some(l) => format!(
-                    "Malformed lock file '{}', line {}, column {}:\n\t{}",
-                    config_lock_filepath.display(),
-                    l.line(),
-                    l.column(),
-                    e.to_string(),
-                ),
-                None => format!(
-                    "Malformed lock file '{}':\n\t{}",
-                    config_lock_filepath.display(),
-                    e.to_string(),
-                ),
-            };
+pub(crate) fn get_config_lock(config_lock_filepath: &PathBuf) -> (ProjectConfigLock, Digest) {
+    let config_lock_bytes = get_file_bytes(config_lock_filepath);
 
-            eprintln!("{}", error_msg);
-            exit(exitcode::DATAERR)
-        }
-    }
+    (
+        match serde_yaml::from_slice::<ProjectConfigLock>(&config_lock_bytes) {
+            Ok(_config_lock) => _config_lock,
+            Err(e) => {
+                let error_msg = match e.location() {
+                    Some(l) => format!(
+                        "Malformed lock file '{}', line {}, column {}:\n\t{}",
+                        config_lock_filepath.display(),
+                        l.line(),
+                        l.column(),
+                        e.to_string(),
+                    ),
+                    None => format!(
+                        "Malformed lock file '{}':\n\t{}",
+                        config_lock_filepath.display(),
+                        e.to_string(),
+                    ),
+                };
+
+                eprintln!("{}", error_msg);
+                exit(exitcode::DATAERR)
+            }
+        },
+        digest(&SHA256, &config_lock_bytes),
+    )
+}
+
+pub(crate) fn get_config(config_filepath: &PathBuf) -> ((), Digest) {
+    ((), digest(&SHA256, &get_file_bytes(config_filepath)))
 }

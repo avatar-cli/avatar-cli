@@ -1,6 +1,6 @@
 [package]
 name = "avatar-cli"
-version = "0.3.0"
+version = "0.3.1"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
 edition = "2018"
 
@@ -9,10 +9,18 @@ atty = "0.2"
 clap = "2.33.1"
 exitcode = "1.1.2"
 nix = "0.17.0"
-rand = "0.7"
 ring = "0.16.15"
 serde_yaml = "0.8"
 which = "4.0.1"
+
+  [dependencies.hex]
+  version = "0.4"
+  features = [ "serde" ]
+
+  [dependencies.rand]
+  version = "0.7"
+  default-features = false
+  features = [ "std" ]
 
   [dependencies.serde]
   version = "1.0"
