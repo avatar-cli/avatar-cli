@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 
 extern crate ring;
 use ring::digest::{digest, Digest, SHA256};
-use ring::test::from_hex;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct VolumeConfig {
