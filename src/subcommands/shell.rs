@@ -33,13 +33,16 @@ pub(crate) fn shell_subcommand() -> () {
             exit(exitcode::USAGE)
         }
     };
+
     // We do not check again if config_path exists, since it was implicitly checked by `get_project_path`.
     let config_path = project_path.join(".avatar-cli").join("avatar-cli.yml");
+
     let config_lock_path = project_path.join(".avatar-cli").join("avatar-cli.lock.yml");
     if !config_lock_path.exists() || !config_lock_path.is_file() {
         eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
         exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
     }
+
     let project_state_path = project_path
         .join(".avatar-cli")
         .join("volatile")
