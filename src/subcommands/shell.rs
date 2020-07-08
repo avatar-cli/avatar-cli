@@ -10,8 +10,7 @@ use std::process::{exit, Command};
 
 extern crate exitcode;
 extern crate rand;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_PATH, SESSION_TOKEN, STATE_PATH};
 use crate::directories::get_project_path;

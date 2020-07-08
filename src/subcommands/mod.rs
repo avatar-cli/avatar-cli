@@ -4,12 +4,13 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
+pub(crate) mod run;
 pub(crate) mod shell;
 
 use std::process::exit;
 
 extern crate clap;
-use clap::{App, AppSettings, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
 
 pub(crate) fn select() -> () {
     let matches = App::new("avatar")
@@ -20,7 +21,13 @@ pub(crate) fn select() -> () {
         )
         .subcommand(
             SubCommand::with_name("run")
-                .about("Executes a wrapped project tool without having to enter into a subshell"),
+                .about("Executes a wrapped project tool without having to enter into a subshell")
+                .arg(Arg::with_name("program_name").index(1).required(true))
+                .arg(
+                    Arg::with_name("program_args")
+                        .multiple(true)
+                        .required(false),
+                ),
         )
         .get_matches();
 
@@ -28,10 +35,7 @@ pub(crate) fn select() -> () {
         Some(subcommand_name) => match subcommand_name {
             "avatar" => exit(exitcode::OK),
             "avatar-cli" => exit(exitcode::OK),
-            "run" => {
-                eprintln!("Code path not yet defined");
-                exit(exitcode::SOFTWARE)
-            }
+            "run" => run::run_subcommand(),
             "shell" => shell::shell_subcommand(),
             _ => {
                 eprintln!("Invalid subcommand");
