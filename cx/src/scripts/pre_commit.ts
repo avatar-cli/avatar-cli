@@ -26,18 +26,26 @@ async function computeAvatarVersion(env: CxEnv): Promise<string> {
 }
 
 async function updatePackageJson(newVersion: string): Promise<boolean> {
-  const filePath = pathJoin(__dirname, '..', '..', 'package.json')
-  const packageJson: { [key: string]: any } = JSON.parse(await readFile(filePath, { encoding: 'utf8' }))
+  return await updateJsonFile('package.json', newVersion)
+}
 
-  if (packageJson?.version === newVersion) {
+async function updatePackageLockJson(newVersion: string): Promise<boolean> {
+  return await updateJsonFile('package-lock.json', newVersion)
+}
+
+async function updateJsonFile(filename: string, newVersion: string): Promise<boolean> {
+  const filePath = pathJoin(__dirname, '..', '..', filename)
+  const jsonObject: { [key: string]: any } = JSON.parse(await readFile(filePath, { encoding: 'utf8' }))
+
+  if (jsonObject?.version === newVersion) {
     return false
   }
 
-  packageJson.version = newVersion
-  await writeFile(filePath, JSON.stringify(packageJson, null, 2))
+  jsonObject.version = newVersion
+  await writeFile(filePath, JSON.stringify(jsonObject, null, 2))
   await cxExec(`git add ${filePath}`)
 
-  console.log('git hook: Updated package.json version')
+  console.log(`git hook: Updated ${filename} version`)
   return true
 }
 
@@ -66,8 +74,9 @@ async function run(): Promise<void> {
   const newVersion = await computeAvatarVersion(env)
 
   const changedPackageJson = await updatePackageJson(newVersion)
+  const changedPackageLockJson = await updatePackageLockJson(newVersion)
   const changedCargoToml = await updateCargoToml(newVersion)
-  const updatedVersion = changedPackageJson || changedCargoToml
+  const updatedVersion = changedPackageJson || changedPackageLockJson || changedCargoToml
 
   if (updatedVersion) {
     console.log('Updated package version')
