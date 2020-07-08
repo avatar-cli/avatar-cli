@@ -8,7 +8,7 @@ boilerplate_checks:
   tags: [docker]
   except:
     refs:
-      - master
+      - main
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
