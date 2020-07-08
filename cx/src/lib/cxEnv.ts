@@ -10,7 +10,7 @@ export type CxDirectoriesEnv = {
 }
 
 export type CxExtraEnv = {
-  CX_GIT_MASTER_REF: string
+  CX_GIT_MAIN_REF: string
   CX_IN_CI?: string
 }
 
@@ -43,7 +43,7 @@ export async function getCxEnvVars(): Promise<CxEnv> {
   }
   const directoriesEnv: CxDirectoriesEnv = { CX_PROJECT_DIR: await getProjectDirectory() }
   const extraEnv: CxExtraEnv = {
-    CX_GIT_MASTER_REF: cxInCI ? 'origin/master' : 'master',
+    CX_GIT_MAIN_REF: cxInCI ? 'origin/main' : 'main',
     CX_IN_CI: cxInCI,
   }
 

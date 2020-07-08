@@ -51,7 +51,7 @@ async function run(): Promise<void> {
   // We do this so we can "compare" branches
   await gitFetch()
 
-  const commonAncestor = await getCommonAncestor(env.CX_GIT_MASTER_REF, env.CX_GIT_COMMIT_HASH)
+  const commonAncestor = await getCommonAncestor(env.CX_GIT_MAIN_REF, env.CX_GIT_COMMIT_HASH)
   const commitHashes = await getCommitHashesList(commonAncestor, env.CX_GIT_COMMIT_HASH)
 
   await checkCommitMessages(commonAncestor)

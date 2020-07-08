@@ -14,7 +14,7 @@ async function computeAvatarVersion(env: CxEnv): Promise<string> {
   // We do this so we can "compare" branches
   await gitFetch()
 
-  const ancestorGitRef = await getCommonAncestor(env.CX_GIT_MASTER_REF, env.CX_GIT_COMMIT_HASH)
+  const ancestorGitRef = await getCommonAncestor(env.CX_GIT_MAIN_REF, env.CX_GIT_COMMIT_HASH)
 
   const commitHashes = await getCommitHashesList(ancestorGitRef, env.CX_GIT_COMMIT_HASH)
   const commitMessages = await getCommitMessages(commitHashes)
