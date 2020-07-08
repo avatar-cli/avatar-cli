@@ -66,11 +66,16 @@ async function updateCargoToml(newVersion: string): Promise<boolean> {
 }
 
 async function run(): Promise<void> {
+  const env = await getCxEnvVars()
+
+  if (env.CX_GIT_REF_NAME === 'main' || env.CX_GIT_REF_NAME === 'origin/main') {
+    throw new Error('Making commits directly against "main" branch is not allowed')
+  }
+
   if (!process.env.FROM_POSTCOMMIT_HOOK) {
     return
   }
 
-  const env = await getCxEnvVars()
   const newVersion = await computeAvatarVersion(env)
 
   const changedPackageJson = await updatePackageJson(newVersion)
