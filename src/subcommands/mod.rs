@@ -12,8 +12,11 @@ use std::process::exit;
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
+const AVATAR_CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 pub(crate) fn select() -> () {
     let matches = App::new("avatar")
+        .version(AVATAR_CLI_VERSION)
         .setting(AppSettings::SubcommandRequired)
         .subcommand(
             SubCommand::with_name("shell")
