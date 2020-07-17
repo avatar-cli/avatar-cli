@@ -6,7 +6,10 @@
 
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
-use std::{path::PathBuf, process::{exit, Command}};
+use std::{
+    path::PathBuf,
+    process::{exit, Command},
+};
 
 extern crate exitcode;
 extern crate rand;
@@ -14,7 +17,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_PATH, SESSION_TOKEN, STATE_PATH};
 use crate::directories::get_project_path;
-use crate::project_config::{get_config, get_config_lock};
+use crate::project_config::{get_config, get_config_lock, ProjectConfigLock};
 
 pub(crate) fn shell_subcommand() -> () {
     if let Ok(session_token) = env::var(SESSION_TOKEN) {
@@ -41,7 +44,9 @@ pub(crate) fn shell_subcommand() -> () {
         .join("volatile")
         .join("state.yml");
 
-    check_project_settings(&config_path, &config_lock_path, &project_state_path);
+    let project_state =
+        check_project_settings(&config_path, &config_lock_path, &project_state_path);
+    check_oci_images_availability(&project_state);
 
     let shell_path = match env::var("SHELL") {
         Ok(sp) => sp,
@@ -73,8 +78,11 @@ pub(crate) fn shell_subcommand() -> () {
         .exec();
 }
 
-
-fn check_project_settings(config_path: &PathBuf, config_lock_path: &PathBuf, project_state_path: &PathBuf) {
+fn check_project_settings(
+    config_path: &PathBuf,
+    config_lock_path: &PathBuf,
+    project_state_path: &PathBuf,
+) -> ProjectConfigLock {
     if !config_lock_path.exists() || !config_lock_path.is_file() {
         eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
         exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
@@ -106,5 +114,46 @@ fn check_project_settings(config_path: &PathBuf, config_lock_path: &PathBuf, pro
             project_state_path.display()
         );
         exit(exitcode::DATAERR) // TODO: Update state instead of stopping the process
+    }
+
+    return project_state;
+}
+
+fn check_oci_images_availability(project_state: &ProjectConfigLock) {
+    let images = project_state.getImages();
+
+    let docker_client_path = match which::which("docker") {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("docker client is not available");
+            exit(exitcode::UNAVAILABLE)
+        }
+    };
+
+    for (image_name, image_tags) in images.iter() {
+        for (_, image_hash) in image_tags.iter() {
+            let inspect_output = Command::new(&docker_client_path)
+                .args(&["inspect", &format!("{}@sha256:{}", image_name, image_hash)])
+                .output();
+
+            match inspect_output {
+                Ok(output) => {
+                    if !output.status.success() {
+                        // TODO: Pull image
+                        eprintln!("Image {}@sha256:{} not available", image_name, image_hash);
+                        exit(exitcode::UNAVAILABLE)
+                    }
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Unable to use docker to inspect image {}@sha256:{}.\n\n{}\n",
+                        image_name,
+                        image_hash,
+                        e.to_string()
+                    );
+                    exit(exitcode::OSERR)
+                }
+            }
+        }
     }
 }

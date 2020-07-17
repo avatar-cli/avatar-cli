@@ -97,6 +97,10 @@ impl ProjectConfigLock {
         &self.projectConfigHash
     }
 
+    pub fn getImages(&self) -> &HashMap<String, HashMap<String, String>> {
+        &self.images
+    }
+
     pub fn getBinaryConfiguration(&self, binary_name: &str) -> Option<&ImageBinaryConfigLock> {
         self.binaries.get(binary_name)
     }
