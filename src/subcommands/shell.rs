@@ -6,7 +6,7 @@
 
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
-use std::process::{exit, Command};
+use std::{path::PathBuf, process::{exit, Command}};
 
 extern crate exitcode;
 extern crate rand;
@@ -35,44 +35,13 @@ pub(crate) fn shell_subcommand() -> () {
 
     // We do not check again if config_path exists, since it was implicitly checked by `get_project_path`.
     let config_path = project_path.join(".avatar-cli").join("avatar-cli.yml");
-
     let config_lock_path = project_path.join(".avatar-cli").join("avatar-cli.lock.yml");
-    if !config_lock_path.exists() || !config_lock_path.is_file() {
-        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
-        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
-    }
-
     let project_state_path = project_path
         .join(".avatar-cli")
         .join("volatile")
         .join("state.yml");
-    if !project_state_path.exists() || !project_state_path.is_file() {
-        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
-        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step
-    }
 
-    let (_, config_hash) = get_config(&config_path);
-    let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
-
-    if &config_hash.as_ref() != &&config_lock.getProjectConfigHash()[..] {
-        eprintln!(
-            "The hash for the file '{}' does not match with the one in '{}'",
-            config_path.display(),
-            config_lock_path.display()
-        );
-        exit(exitcode::DATAERR) // TODO: Update config_lock & state instead of stopping the process
-    }
-
-    let (project_state, _) = get_config_lock(&project_state_path);
-
-    if &config_lock_hash.as_ref() != &&project_state.getProjectConfigHash()[..] {
-        eprintln!(
-            "The hash for the file '{}' does not match with the one in '{}'",
-            config_lock_path.display(),
-            project_state_path.display()
-        );
-        exit(exitcode::DATAERR) // TODO: Update state instead of stopping the process
-    }
+    check_project_settings(&config_path, &config_lock_path, &project_state_path);
 
     let shell_path = match env::var("SHELL") {
         Ok(sp) => sp,
@@ -102,4 +71,40 @@ pub(crate) fn shell_subcommand() -> () {
         .env(SESSION_TOKEN, session_token)
         .env(STATE_PATH, project_state_path)
         .exec();
+}
+
+
+fn check_project_settings(config_path: &PathBuf, config_lock_path: &PathBuf, project_state_path: &PathBuf) {
+    if !config_lock_path.exists() || !config_lock_path.is_file() {
+        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
+        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
+    }
+
+    if !project_state_path.exists() || !project_state_path.is_file() {
+        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
+        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step
+    }
+
+    let (_, config_hash) = get_config(&config_path);
+    let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
+
+    if &config_hash.as_ref() != &&config_lock.getProjectConfigHash()[..] {
+        eprintln!(
+            "The hash for the file '{}' does not match with the one in '{}'",
+            config_path.display(),
+            config_lock_path.display()
+        );
+        exit(exitcode::DATAERR) // TODO: Update config_lock & state instead of stopping the process
+    }
+
+    let (project_state, _) = get_config_lock(&project_state_path);
+
+    if &config_lock_hash.as_ref() != &&project_state.getProjectConfigHash()[..] {
+        eprintln!(
+            "The hash for the file '{}' does not match with the one in '{}'",
+            config_lock_path.display(),
+            project_state_path.display()
+        );
+        exit(exitcode::DATAERR) // TODO: Update state instead of stopping the process
+    }
 }
