@@ -1,5 +1,6 @@
 #!/usr/bin/env ts-node-script
 
+import { existsSync } from 'fs'
 import { execSync } from 'child_process'
 import { getCxEnvVars } from '../lib/cxEnv'
 
@@ -9,6 +10,11 @@ async function run(): Promise<void> {
   }
 
   const env = await getCxEnvVars()
+
+  if (existsSync(`${env.CX_PROJECT_DIR}/.git/rebase-merge`) || existsSync(`${env.CX_PROJECT_DIR}/.git/rebase-apply`)) {
+    return
+  }
+
   execSync(`ln -fs "${env.CX_PROJECT_DIR}/.git" "${env.CX_PROJECT_DIR}/cx/.git"`)
   try {
     execSync('exec < /dev/tty && npm run git-cz -- --hook', { stdio: ['inherit', 'inherit', 'inherit'] })
