@@ -144,13 +144,10 @@ fn run_docker_command(
     session_token: &str,
     skip_args: usize,
 ) -> () {
-    let docker_client_path = match which::which("docker") {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("docker client is not available");
-            exit(exitcode::UNAVAILABLE)
-        }
-    };
+    if let Err(_) = which::which("docker") { 
+        eprintln!("docker client is not available");
+        exit(exitcode::UNAVAILABLE)
+    }
 
     let mut interactive_options: Vec<&str> = vec!["-i"]; // TODO: Check if stdin is open
     if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
@@ -165,7 +162,7 @@ fn run_docker_command(
         }
     };
 
-    Command::new(docker_client_path)
+    Command::new("docker")
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
         .args(&[

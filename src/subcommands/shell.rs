@@ -119,41 +119,44 @@ fn check_project_settings(
     return project_state;
 }
 
-fn check_oci_images_availability(project_state: &ProjectConfigLock) {
+fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
     let images = project_state.getImages();
 
-    let docker_client_path = match which::which("docker") {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("docker client is not available");
-            exit(exitcode::UNAVAILABLE)
-        }
-    };
+    if let Err(_) = which::which("docker") { 
+        eprintln!("docker client is not available");
+        exit(exitcode::UNAVAILABLE)
+    }
 
     for (image_name, image_tags) in images.iter() {
         for (_, image_hash) in image_tags.iter() {
-            let inspect_output = Command::new(&docker_client_path)
+            let inspect_output = Command::new("docker")
                 .args(&["inspect", &format!("{}@sha256:{}", image_name, image_hash)])
                 .output();
 
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        // TODO: Pull image
-                        eprintln!("Image {}@sha256:{} not available", image_name, image_hash);
-                        exit(exitcode::UNAVAILABLE)
+                        pull_oci_image_by_hash(format!("{}@sha256:{}", image_name, image_hash))
                     }
                 }
-                Err(e) => {
+                Err(err) => {
                     eprintln!(
                         "Unable to use docker to inspect image {}@sha256:{}.\n\n{}\n",
                         image_name,
                         image_hash,
-                        e.to_string()
+                        err.to_string()
                     );
                     exit(exitcode::OSERR)
                 }
             }
         }
+    }
+}
+
+fn pull_oci_image_by_hash(image_ref: String) -> () {
+    // This code assumes that the existence of the docker command has been checked before
+    if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
+        eprintln!("Unable to pull image {}.\n\n{}\n", image_ref, err.to_string());
+        exit(exitcode::UNAVAILABLE)
     }
 }
