@@ -41,7 +41,7 @@ pub(crate) fn run_subcommand() -> () {
         Err(_) => thread_rng().sample_iter(&Alphanumeric).take(16).collect(),
     };
 
-    run(&project_path, &used_program_name, &session_token, 3)
+    run(&project_path, &used_program_name, &session_token, 4)
 }
 
 pub(crate) fn run_in_subshell_mode(used_program_name: &str) -> () {
@@ -120,7 +120,7 @@ fn run(
         Some(c) => c,
         None => {
             eprintln!(
-                "Binary '{}' not properly configure in lock file '{}'",
+                "Binary '{}' not properly configured in lock file '{}'",
                 used_program_name,
                 project_state_path.display()
             );
