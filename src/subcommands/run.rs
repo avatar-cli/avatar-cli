@@ -14,7 +14,7 @@ extern crate exitcode;
 extern crate nix;
 extern crate which;
 
-use crate::avatar_env::{AvatarEnv, SESSION_TOKEN};
+use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
 use crate::directories::{check_if_inside_project_dir, get_project_path};
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -132,6 +132,7 @@ fn run(
         binary_configuration,
         &current_dir,
         project_path,
+        project_state.getProjectInternalId(),
         session_token,
         skip_args,
     );
@@ -141,10 +142,11 @@ fn run_docker_command(
     binary_configuration: &ImageBinaryConfigLock,
     current_dir: &PathBuf,
     project_path: &PathBuf,
+    project_internal_id: &str,
     session_token: &str,
     skip_args: usize,
 ) -> () {
-    if let Err(_) = which::which("docker") { 
+    if let Err(_) = which::which("docker") {
         eprintln!("docker client is not available");
         exit(exitcode::UNAVAILABLE)
     }
@@ -162,10 +164,29 @@ fn run_docker_command(
         }
     };
 
+    let process_id: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    let project_name = match project_path.file_name().unwrap().to_str() {
+        Some(pn) => pn,
+        None => "xxx",
+    };
+    let program_name = match binary_configuration.getPath().file_name().unwrap().to_str() {
+        Some(pn) => pn,
+        None => "yyy",
+    };
+
     Command::new("docker")
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
         .args(&[
+            "--name",
+            &format!(
+                "{}_{}_{}_{}_{}",
+                project_name, program_name, project_internal_id, session_token, process_id
+            ),
+            "--env",
+            &format!("{}={}", PROCESS_ID, process_id),
+            "--env",
+            &format!("{}={}", PROJECT_INTERNAL_ID, project_internal_id),
             "--env",
             &format!("{}={}", SESSION_TOKEN, session_token),
             "--user",

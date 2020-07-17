@@ -22,7 +22,7 @@ dependencies = [
 
 [[package]]
 name = "avatar-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "atty",
  "clap",

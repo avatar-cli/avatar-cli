@@ -1,6 +1,6 @@
 {
   "name": "@avatar-cli/avatar-cli",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Avatar-CLI",
   "author": "Andres Correa Casablanca <castarco@coderspirit.xyz>",
   "license": "GPL-3.0",
@@ -24,7 +24,7 @@
     "@typescript-eslint/parser": "^3.6.1",
     "commitizen": "^4.1.2",
     "cz-conventional-changelog": "^3.2.0",
-    "eslint": "^7.3.1",
+    "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
     "husky": "^4.2.5",

@@ -15,7 +15,9 @@ extern crate exitcode;
 extern crate rand;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
-use crate::avatar_env::{CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_PATH, SESSION_TOKEN, STATE_PATH};
+use crate::avatar_env::{
+    CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_INTERNAL_ID, PROJECT_PATH, SESSION_TOKEN, STATE_PATH,
+};
 use crate::directories::get_project_path;
 use crate::project_config::{get_config, get_config_lock, ProjectConfigLock};
 
@@ -73,6 +75,7 @@ pub(crate) fn shell_subcommand() -> () {
         .env(CONFIG_PATH, config_path)
         .env(CONFIG_LOCK_PATH, config_lock_path)
         .env(PROJECT_PATH, project_path)
+        .env(PROJECT_INTERNAL_ID, project_state.getProjectInternalId())
         .env(SESSION_TOKEN, session_token)
         .env(STATE_PATH, project_state_path)
         .exec();
@@ -122,7 +125,7 @@ fn check_project_settings(
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
     let images = project_state.getImages();
 
-    if let Err(_) = which::which("docker") { 
+    if let Err(_) = which::which("docker") {
         eprintln!("docker client is not available");
         exit(exitcode::UNAVAILABLE)
     }
@@ -156,7 +159,11 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
 fn pull_oci_image_by_hash(image_ref: String) -> () {
     // This code assumes that the existence of the docker command has been checked before
     if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
-        eprintln!("Unable to pull image {}.\n\n{}\n", image_ref, err.to_string());
+        eprintln!(
+            "Unable to pull image {}.\n\n{}\n",
+            image_ref,
+            err.to_string()
+        );
         exit(exitcode::UNAVAILABLE)
     }
 }

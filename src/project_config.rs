@@ -51,6 +51,7 @@ pub(crate) struct OCIImageConfig {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfig {
     version: String,
+    projectInternalId: String,
     images: Option<Vec<OCIImageConfig>>,
 }
 
@@ -88,6 +89,7 @@ impl ImageBinaryConfigLock {
 pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     projectConfigHash: Vec<u8>,
+    projectInternalId: String,
     images: HashMap<String, HashMap<String, String>>, // image_name -> image_tag -> image_hash
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }
@@ -95,6 +97,10 @@ pub(crate) struct ProjectConfigLock {
 impl ProjectConfigLock {
     pub fn getProjectConfigHash(&self) -> &Vec<u8> {
         &self.projectConfigHash
+    }
+
+    pub fn getProjectInternalId(&self) -> &String {
+        &self.projectInternalId
     }
 
     pub fn getImages(&self) -> &HashMap<String, HashMap<String, String>> {
