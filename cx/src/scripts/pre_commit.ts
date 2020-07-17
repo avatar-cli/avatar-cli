@@ -50,18 +50,18 @@ async function updateJsonFile(filename: string, newVersion: string): Promise<boo
 }
 
 async function updateCargoToml(newVersion: string): Promise<boolean> {
-  const filePath = pathJoin(__dirname, '..', '..', '..', 'Cargo.toml')
+  const tomlPath = pathJoin(__dirname, '..', '..', '..', 'Cargo.toml')
   const lockPath = pathJoin(__dirname, '..', '..', '..', 'Cargo.lock')
-  const cargoToml = tomlParse(await readFile(filePath, { encoding: 'utf8' }))
+  const cargoToml = tomlParse(await readFile(tomlPath, { encoding: 'utf8' }))
 
   if ((cargoToml.package as JsonMap).version === newVersion) {
     return false
   }
 
   ;(cargoToml.package as JsonMap).version = newVersion
-  await writeFile(filePath, tomlStringify(cargoToml))
+  await writeFile(tomlPath, tomlStringify(cargoToml))
   await cxExec('cargo check')
-  await cxExec(`git add ${filePath} ${lockPath}`)
+  await cxExec(`git add ${tomlPath} ${lockPath}`)
 
   console.log('git hook: Updated Cargo.toml package version')
   return true
