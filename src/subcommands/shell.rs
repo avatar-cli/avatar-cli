@@ -19,7 +19,7 @@ use crate::avatar_env::{
     CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_INTERNAL_ID, PROJECT_PATH, SESSION_TOKEN, STATE_PATH,
 };
 use crate::directories::get_project_path;
-use crate::project_config::{get_config, get_config_lock, ProjectConfigLock};
+use crate::project_config::{get_config, get_config_lock, ProjectConfigLock, save_config_lock};
 
 pub(crate) fn shell_subcommand() -> () {
     if let Ok(session_token) = env::var(SESSION_TOKEN) {
@@ -86,20 +86,15 @@ fn check_project_settings(
     config_lock_path: &PathBuf,
     project_state_path: &PathBuf,
 ) -> ProjectConfigLock {
+    let (_, config_hash) = get_config(&config_path);
+
     if !config_lock_path.exists() || !config_lock_path.is_file() {
         eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
         exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
     }
-
-    if !project_state_path.exists() || !project_state_path.is_file() {
-        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
-        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step
-    }
-
-    let (_, config_hash) = get_config(&config_path);
     let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
 
-    if &config_hash.as_ref() != &&config_lock.getProjectConfigHash()[..] {
+    if config_hash.as_ref() != &config_lock.getProjectConfigHash()[..] {
         eprintln!(
             "The hash for the file '{}' does not match with the one in '{}'",
             config_path.display(),
@@ -108,18 +103,31 @@ fn check_project_settings(
         exit(exitcode::DATAERR) // TODO: Update config_lock & state instead of stopping the process
     }
 
-    let (project_state, _) = get_config_lock(&project_state_path);
+    let project_state = match project_state_path.exists() {
+        true => {
+            if !project_state_path.is_file() {
+                eprintln!("The path {} must point to a regular file, found something else", project_state_path.display());
+                exit(exitcode::DATAERR)
+            }
 
-    if &config_lock_hash.as_ref() != &&project_state.getProjectConfigHash()[..] {
-        eprintln!(
-            "The hash for the file '{}' does not match with the one in '{}'",
-            config_lock_path.display(),
-            project_state_path.display()
-        );
-        exit(exitcode::DATAERR) // TODO: Update state instead of stopping the process
-    }
+            let (mut _project_state, _) = get_config_lock(&project_state_path);
+
+            if config_lock_hash.as_ref() != &_project_state.getProjectConfigHash()[..] {
+                _project_state = update_project_state(project_state_path, _project_state, config_lock_hash.as_ref());
+            }
+
+            _project_state
+        },
+        false => update_project_state(project_state_path, config_lock.clone(), config_lock_hash.as_ref())
+    };
 
     return project_state;
+}
+
+fn update_project_state(project_state_path: &PathBuf, mut project_state: ProjectConfigLock, config_lock_hash: &[u8]) -> ProjectConfigLock {
+    project_state = project_state.updateProjectConfigHash(config_lock_hash);
+    save_config_lock(project_state_path, &project_state);
+    project_state
 }
 
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {

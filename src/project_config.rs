@@ -6,7 +6,7 @@
 #![allow(non_snake_case)]
 
 use std::collections::HashMap;
-use std::fs::read;
+use std::fs::{read, write};
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::process::exit;
@@ -17,18 +17,18 @@ use serde::{Deserialize, Serialize};
 extern crate ring;
 use ring::digest::{digest, Digest, SHA256};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct VolumeConfig {
     containerPath: PathBuf,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct BindingConfig {
     hostPath: PathBuf,
     containerPath: PathBuf,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct OCIContainerRunConfig {
     volumes: Option<Vec<VolumeConfig>>,
     bindings: Option<Vec<BindingConfig>>,
@@ -63,7 +63,7 @@ pub(crate) struct OCIImageConfigLock {
     hash: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ImageBinaryConfigLock {
     ociImageName: String,
     ociImageHash: String,
@@ -85,7 +85,7 @@ impl ImageBinaryConfigLock {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     projectConfigHash: Vec<u8>,
@@ -97,6 +97,11 @@ pub(crate) struct ProjectConfigLock {
 impl ProjectConfigLock {
     pub fn getProjectConfigHash(&self) -> &Vec<u8> {
         &self.projectConfigHash
+    }
+
+    pub fn updateProjectConfigHash(mut self, new_hash: &[u8]) -> ProjectConfigLock {
+        self.projectConfigHash = Vec::from(new_hash);
+        self
     }
 
     pub fn getProjectInternalId(&self) -> &String {
@@ -178,4 +183,18 @@ pub(crate) fn get_config_lock(config_lock_filepath: &PathBuf) -> (ProjectConfigL
 
 pub(crate) fn get_config(config_filepath: &PathBuf) -> ((), Digest) {
     ((), digest(&SHA256, &get_file_bytes(config_filepath)))
+}
+
+pub(crate) fn save_config_lock(config_lock_filepath: &PathBuf, config_lock: &ProjectConfigLock) -> () {
+    match serde_yaml::to_vec(config_lock) {
+        Ok(serialized_config_lock) => {
+            if let Err(err) = write(config_lock_filepath, serialized_config_lock) {
+                eprintln!("Unknown error while persisting project state:\n\n{}\n", err.to_string());
+            }
+        },
+        Err(err) => {
+            eprintln!("Unknown error while serializing project state:\n\n{}\n", err.to_string());
+            exit(exitcode::SOFTWARE)
+        }
+    }
 }
