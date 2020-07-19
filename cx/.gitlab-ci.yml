@@ -1,6 +1,7 @@
 ---
 stages:
   - boilerplate_checks
+  - test
 
 boilerplate_checks:
   stage: boilerplate_checks
@@ -14,3 +15,8 @@ boilerplate_checks:
     - 'npm install'
     - 'npm run lint'
     - './node_modules/.bin/ts-node ./src/scripts/git_checks.ts'
+
+include:
+  # See https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+  # See https://gitlab.com/gitlab-org/gitlab-foss/blob/master/lib/gitlab/ci/templates/Security/SAST.gitlab-ci.yml
+  - template: SAST.gitlab-ci.yml
