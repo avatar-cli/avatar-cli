@@ -1,15 +1,11 @@
 ---
 version: '0.6.0'
-projectInternalId: 'v2ZmtbkGuVdvGwVE'
-images: ~
-# node:
-#   14-buster:
-#     binaries:
-#       node:
-#         ociImageName: 'node'
-#         ociImageHash: 'e6320b0bfd0ab1484c38788b2a8b69476df0d0934b3cfd96d36a2b16ea03e0b0'
-#         path: 'node'
-#       customsh:
-#         ociImageName: 'node'
-#         ociImageHash: 'e6320b0bfd0ab1484c38788b2a8b69476df0d0934b3cfd96d36a2b16ea03e0b0'
-#         path: 'sh'
+projectInternalId: v2ZmtbkGuVdvGwVE
+images:
+  node:
+    14-buster:
+      binaries:
+        node:
+          path: node
+        customsh:
+          path: sh

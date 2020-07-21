@@ -22,7 +22,8 @@ use crate::avatar_env::{
 };
 use crate::directories::get_project_path;
 use crate::project_config::{
-    get_config, get_config_lock, save_config_lock, OCIImageConfig, ProjectConfig, ProjectConfigLock,
+    get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock,
+    OCIImageConfig, ProjectConfig, ProjectConfigLock,
 };
 use ring::digest::{digest, Digest, SHA256};
 
@@ -161,11 +162,14 @@ fn generate_config_lock(
     config: &ProjectConfig,
     config_hash: &Digest,
 ) -> (ProjectConfigLock, Digest) {
+    let image_hashes = get_image_hashes(config);
+    let binaries_settings = get_binaries_settings(config, &image_hashes);
+
     let config_lock = ProjectConfigLock::new(
         Vec::<u8>::from(config_hash.as_ref()),
         config.getProjectInternalId().clone(),
-        get_image_hashes(config),
-        HashMap::new(), // TODO
+        image_hashes,
+        binaries_settings,
     );
 
     let config_lock_bytes = save_config_lock(config_lock_path, &config_lock);
@@ -204,7 +208,7 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
     {
         Ok(output) => match output.status.success() {
             true => match from_utf8(&output.stdout) {
-                Ok(stdout) => match stdout.split(":").nth(1) {
+                Ok(stdout) => match stdout.trim().split(":").nth(1) {
                     Some(hash) => (image_tag.clone(), hash.to_string()),
                     None => {
                         eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
@@ -246,6 +250,55 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
             exit(exitcode::OSERR)
         }
     }
+}
+
+fn get_binaries_settings(
+    config: &ProjectConfig,
+    images_name_tag_hash_rel: &HashMap<String, HashMap<String, String>>,
+) -> HashMap<String, ImageBinaryConfigLock> {
+    let mut dst_binaries: HashMap<String, ImageBinaryConfigLock> = HashMap::new();
+
+    if let Some(images) = config.getImages() {
+        for (image_name, image_tags) in images {
+            for (image_tag, image_config) in image_tags {
+                match image_config.getBinaries() {
+                    Some(src_binaries) => {
+                        for (binary_name, binary_config) in src_binaries {
+                            let image_hash = match images_name_tag_hash_rel.get(image_name) {
+                                Some(images_tag_hash_rel) => {
+                                    match images_tag_hash_rel.get(image_tag) {
+                                        Some(_image_hash) => _image_hash,
+                                        None => {
+                                            eprintln!(
+                                                "A theoretically impossible error just happened."
+                                            );
+                                            exit(exitcode::SOFTWARE)
+                                        }
+                                    }
+                                }
+                                None => {
+                                    eprintln!("A theoretically impossible error just happened.");
+                                    exit(exitcode::SOFTWARE)
+                                }
+                            };
+
+                            dst_binaries.insert(
+                                binary_name.clone(),
+                                ImageBinaryConfigLock::new(
+                                    image_name.clone(),
+                                    image_hash.clone(),
+                                    binary_config.getPath().clone(),
+                                ),
+                            );
+                        }
+                    }
+                    None => { /* Do nothing */ }
+                }
+            }
+        }
+    }
+
+    dst_binaries
 }
 
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {

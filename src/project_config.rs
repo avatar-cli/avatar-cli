@@ -36,15 +36,25 @@ pub(crate) struct OCIContainerRunConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ImageBinaryConfig {
-    name: Option<String>, // If not set, it will be inferred from path
     path: PathBuf,
     runConfig: Option<OCIContainerRunConfig>,
 }
 
+impl ImageBinaryConfig {
+    pub fn getPath(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct OCIImageConfig {
-    binaries: Option<Vec<ImageBinaryConfig>>,
-    runConfig: Option<OCIContainerRunConfig>,
+    binaries: Option<HashMap<String, ImageBinaryConfig>>,
+}
+
+impl OCIImageConfig {
+    pub fn getBinaries(&self) -> &Option<HashMap<String, ImageBinaryConfig>> {
+        &self.binaries
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -81,6 +91,15 @@ pub(crate) struct ImageBinaryConfigLock {
 }
 
 impl ImageBinaryConfigLock {
+    pub fn new(ociImageName: String, ociImageHash: String, path: PathBuf) -> ImageBinaryConfigLock {
+        ImageBinaryConfigLock {
+            ociImageName: ociImageName,
+            ociImageHash: ociImageHash,
+            path: path,
+            runConfig: None, // TODO
+        }
+    }
+
     pub fn getOCIImageName(&self) -> &String {
         &self.ociImageName
     }
