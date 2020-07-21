@@ -34,16 +34,15 @@ pub(crate) struct OCIContainerRunConfig {
     bindings: Option<Vec<BindingConfig>>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ImageBinaryConfig {
     name: Option<String>, // If not set, it will be inferred from path
     path: PathBuf,
     runConfig: Option<OCIContainerRunConfig>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct OCIImageConfig {
-    name: String, // fully qualified name, including tag
     binaries: Option<Vec<ImageBinaryConfig>>,
     runConfig: Option<OCIContainerRunConfig>,
 }
@@ -52,7 +51,17 @@ pub(crate) struct OCIImageConfig {
 pub(crate) struct ProjectConfig {
     version: String,
     projectInternalId: String,
-    images: Option<Vec<OCIImageConfig>>,
+    images: Option<HashMap<String, HashMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
+}
+
+impl ProjectConfig {
+    pub fn getProjectInternalId(&self) -> &String {
+        &self.projectInternalId
+    }
+
+    pub fn getImages(&self) -> &Option<HashMap<String, HashMap<String, OCIImageConfig>>> {
+        &self.images
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -114,6 +123,20 @@ impl ProjectConfigLock {
 
     pub fn getBinaryConfiguration(&self, binary_name: &str) -> Option<&ImageBinaryConfigLock> {
         self.binaries.get(binary_name)
+    }
+
+    pub fn new(
+        projectConfigHash: Vec<u8>,
+        projectInternalId: String,
+        images: HashMap<String, HashMap<String, String>>,
+        binaries: HashMap<String, ImageBinaryConfigLock>,
+    ) -> ProjectConfigLock {
+        ProjectConfigLock {
+            projectConfigHash: projectConfigHash,
+            projectInternalId: projectInternalId,
+            images: images,
+            binaries: binaries,
+        }
     }
 }
 
@@ -181,19 +204,55 @@ pub(crate) fn get_config_lock(config_lock_filepath: &PathBuf) -> (ProjectConfigL
     )
 }
 
-pub(crate) fn get_config(config_filepath: &PathBuf) -> ((), Digest) {
-    ((), digest(&SHA256, &get_file_bytes(config_filepath)))
-}
+pub(crate) fn get_config(config_filepath: &PathBuf) -> (ProjectConfig, Digest) {
+    let config_bytes = get_file_bytes(config_filepath);
 
-pub(crate) fn save_config_lock(config_lock_filepath: &PathBuf, config_lock: &ProjectConfigLock) -> () {
-    match serde_yaml::to_vec(config_lock) {
-        Ok(serialized_config_lock) => {
-            if let Err(err) = write(config_lock_filepath, serialized_config_lock) {
-                eprintln!("Unknown error while persisting project state:\n\n{}\n", err.to_string());
+    (
+        match serde_yaml::from_slice::<ProjectConfig>(&config_bytes) {
+            Ok(_config) => _config,
+            Err(e) => {
+                let error_msg = match e.location() {
+                    Some(l) => format!(
+                        "Malformed config file '{}', line {}, column {}:\n\t{}",
+                        config_filepath.display(),
+                        l.line(),
+                        l.column(),
+                        e.to_string(),
+                    ),
+                    None => format!(
+                        "Malformed config file '{}':\n\t{}",
+                        config_filepath.display(),
+                        e.to_string(),
+                    ),
+                };
+
+                eprintln!("{}", error_msg);
+                exit(exitcode::DATAERR)
             }
         },
-        Err(err) => {
-            eprintln!("Unknown error while serializing project state:\n\n{}\n", err.to_string());
+        digest(&SHA256, &config_bytes),
+    )
+}
+
+pub(crate) fn save_config_lock(
+    config_lock_filepath: &PathBuf,
+    config_lock: &ProjectConfigLock,
+) -> Vec<u8> {
+    match serde_yaml::to_vec(config_lock) {
+        Ok(serialized_config_lock) => {
+            if let Err(e) = write(config_lock_filepath, &serialized_config_lock) {
+                eprintln!(
+                    "Unknown error while persisting project state:\n\n{}\n",
+                    e.to_string()
+                );
+            }
+            serialized_config_lock
+        }
+        Err(e) => {
+            eprintln!(
+                "Unknown error while serializing project state:\n\n{}\n",
+                e.to_string()
+            );
             exit(exitcode::SOFTWARE)
         }
     }

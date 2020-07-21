@@ -7,8 +7,10 @@
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::{
+    collections::HashMap,
     path::PathBuf,
     process::{exit, Command},
+    str::from_utf8,
 };
 
 extern crate exitcode;
@@ -19,7 +21,10 @@ use crate::avatar_env::{
     CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_INTERNAL_ID, PROJECT_PATH, SESSION_TOKEN, STATE_PATH,
 };
 use crate::directories::get_project_path;
-use crate::project_config::{get_config, get_config_lock, ProjectConfigLock, save_config_lock};
+use crate::project_config::{
+    get_config, get_config_lock, save_config_lock, OCIImageConfig, ProjectConfig, ProjectConfigLock,
+};
+use ring::digest::{digest, Digest, SHA256};
 
 pub(crate) fn shell_subcommand() -> () {
     if let Ok(session_token) = env::var(SESSION_TOKEN) {
@@ -86,48 +91,161 @@ fn check_project_settings(
     config_lock_path: &PathBuf,
     project_state_path: &PathBuf,
 ) -> ProjectConfigLock {
-    let (_, config_hash) = get_config(&config_path);
+    let (config, config_hash) = get_config(&config_path);
 
-    if !config_lock_path.exists() || !config_lock_path.is_file() {
-        eprintln!("Avatar CLI does not yet implement the implicit 'install' step");
-        exit(exitcode::SOFTWARE) // TODO: Trigger implicit "install" step (but here it will do more stuff than in the previous case)
-    }
-    let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
+    let (config_lock, config_lock_hash) = match config_lock_path.exists() {
+        true => {
+            if !config_lock_path.is_file() {
+                eprintln!(
+                    "The path {} must point to a regular file, found something else",
+                    project_state_path.display()
+                );
+                exit(exitcode::DATAERR)
+            }
 
-    if config_hash.as_ref() != &config_lock.getProjectConfigHash()[..] {
-        eprintln!(
-            "The hash for the file '{}' does not match with the one in '{}'",
-            config_path.display(),
-            config_lock_path.display()
-        );
-        exit(exitcode::DATAERR) // TODO: Update config_lock & state instead of stopping the process
-    }
+            let (_config_lock, _config_lock_hash) = get_config_lock(&config_lock_path);
+
+            if config_hash.as_ref() != &_config_lock.getProjectConfigHash()[..] {
+                generate_config_lock(config_lock_path, &config, &config_hash)
+            } else {
+                (_config_lock, _config_lock_hash)
+            }
+        }
+        false => generate_config_lock(config_lock_path, &config, &config_hash),
+    };
 
     let project_state = match project_state_path.exists() {
         true => {
             if !project_state_path.is_file() {
-                eprintln!("The path {} must point to a regular file, found something else", project_state_path.display());
+                eprintln!(
+                    "The path {} must point to a regular file, found something else",
+                    project_state_path.display()
+                );
                 exit(exitcode::DATAERR)
             }
 
             let (mut _project_state, _) = get_config_lock(&project_state_path);
 
             if config_lock_hash.as_ref() != &_project_state.getProjectConfigHash()[..] {
-                _project_state = update_project_state(project_state_path, _project_state, config_lock_hash.as_ref());
+                _project_state = update_project_state(
+                    project_state_path,
+                    _project_state,
+                    config_lock_hash.as_ref(),
+                );
             }
 
             _project_state
-        },
-        false => update_project_state(project_state_path, config_lock.clone(), config_lock_hash.as_ref())
+        }
+        false => update_project_state(
+            project_state_path,
+            config_lock.clone(),
+            config_lock_hash.as_ref(),
+        ),
     };
 
     return project_state;
 }
 
-fn update_project_state(project_state_path: &PathBuf, mut project_state: ProjectConfigLock, config_lock_hash: &[u8]) -> ProjectConfigLock {
+fn update_project_state(
+    project_state_path: &PathBuf,
+    mut project_state: ProjectConfigLock,
+    config_lock_hash: &[u8],
+) -> ProjectConfigLock {
     project_state = project_state.updateProjectConfigHash(config_lock_hash);
     save_config_lock(project_state_path, &project_state);
     project_state
+}
+
+fn generate_config_lock(
+    config_lock_path: &PathBuf,
+    config: &ProjectConfig,
+    config_hash: &Digest,
+) -> (ProjectConfigLock, Digest) {
+    let config_lock = ProjectConfigLock::new(
+        Vec::<u8>::from(config_hash.as_ref()),
+        config.getProjectInternalId().clone(),
+        get_image_hashes(config),
+        HashMap::new(), // TODO
+    );
+
+    let config_lock_bytes = save_config_lock(config_lock_path, &config_lock);
+    (config_lock, digest(&SHA256, &config_lock_bytes))
+}
+
+fn get_image_hashes(config: &ProjectConfig) -> HashMap<String, HashMap<String, String>> {
+    match config.getImages() {
+        Some(images) => images.iter().map(replace_configs_by_hashes).collect(),
+        None => HashMap::new(),
+    }
+}
+
+fn replace_configs_by_hashes(
+    (image_name, image_tags): (&String, &HashMap<String, OCIImageConfig>),
+) -> (String, HashMap<String, String>) {
+    if image_tags.is_empty() {
+        eprintln!("No tags are defined for image {}", image_name);
+        exit(exitcode::DATAERR)
+    }
+
+    (
+        image_name.clone(),
+        image_tags
+            .iter()
+            .map(|(image_tag, _)| (image_tag, format!("{}:{}", image_name, image_tag)))
+            .map(get_image_hash_by_tag)
+            .collect(),
+    )
+}
+
+fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, String) {
+    match Command::new("docker")
+        .args(&["inspect", "--format='{{index .RepoDigests 0}}'", &image_fqn])
+        .output()
+    {
+        Ok(output) => match output.status.success() {
+            true => match from_utf8(&output.stdout) {
+                Ok(stdout) => match stdout.split(":").nth(1) {
+                    Some(hash) => (image_tag.clone(), hash.to_string()),
+                    None => {
+                        eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
+                        exit(exitcode::PROTOCOL)
+                    }
+                },
+                Err(e) => {
+                    eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output.\n\n{}\n", image_fqn, e.to_string());
+                    exit(exitcode::PROTOCOL)
+                }
+            },
+            false => match Command::new("docker")
+                .args(&["image", "pull", &image_fqn])
+                .status()
+            {
+                Ok(status) => match status.success() {
+                    true => get_image_hash_by_tag((image_tag, image_fqn)),
+                    false => {
+                        eprintln!("Unable to pull OCI image {}", image_fqn);
+                        exit(exitcode::UNAVAILABLE)
+                    }
+                },
+                Err(e) => {
+                    eprintln!(
+                        "Unknow error while trying to pull OCI image {}:\n\n{}\n",
+                        image_fqn,
+                        e.to_string()
+                    );
+                    exit(exitcode::OSERR)
+                }
+            },
+        },
+        Err(e) => {
+            eprintln!(
+                "Unknow error while trying to inspect OCI image {}:\n\n{}\n",
+                image_fqn,
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    }
 }
 
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
