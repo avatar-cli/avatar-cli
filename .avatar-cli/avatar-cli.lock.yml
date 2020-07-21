@@ -5,13 +5,13 @@ images:
   node:
     14-buster: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
 binaries:
-  node:
-    ociImageName: node
-    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: node
-    runConfig: ~
   customsh:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
     path: sh
+    runConfig: ~
+  node:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: node
     runConfig: ~

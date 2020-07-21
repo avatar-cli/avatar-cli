@@ -125,17 +125,17 @@ fn check_project_settings(
                 exit(exitcode::DATAERR)
             }
 
-            let (mut _project_state, _) = get_config_lock(&project_state_path);
+            let (_project_state, _) = get_config_lock(&project_state_path);
 
             if config_lock_hash.as_ref() != &_project_state.getProjectConfigHash()[..] {
-                _project_state = update_project_state(
+                update_project_state(
                     project_state_path,
-                    _project_state,
+                    config_lock.clone(),
                     config_lock_hash.as_ref(),
-                );
+                )
+            } else {
+                _project_state
             }
-
-            _project_state
         }
         false => update_project_state(
             project_state_path,
