@@ -3,15 +3,15 @@ projectConfigHash: 0e1dc1e63997681f8ed789f277084f3c90b6f913a8ae457bada7cb13b6fcc
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
-    14-buster: "c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1'"
+    14-buster: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
 binaries:
-  customsh:
-    ociImageName: node
-    ociImageHash: "c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1'"
-    path: sh
-    runConfig: ~
   node:
     ociImageName: node
-    ociImageHash: "c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1'"
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
     path: node
+    runConfig: ~
+  customsh:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: sh
     runConfig: ~

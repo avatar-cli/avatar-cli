@@ -203,7 +203,7 @@ fn replace_configs_by_hashes(
 
 fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, String) {
     match Command::new("docker")
-        .args(&["inspect", "--format='{{index .RepoDigests 0}}'", &image_fqn])
+        .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
         .output()
     {
         Ok(output) => match output.status.success() {
