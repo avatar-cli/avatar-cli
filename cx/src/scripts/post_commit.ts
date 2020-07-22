@@ -16,10 +16,14 @@ async function run(): Promise<void> {
   const packageJsonPath = pathJoin(__dirname, '..', '..', 'package.json')
   const packageLockJsonPath = pathJoin(__dirname, '..', '..', 'package-lock.json')
   const cargoTomlPath = pathJoin(__dirname, '..', '..', '..', 'Cargo.toml')
+  const cargoLockPath = pathJoin(__dirname, '..', '..', '..', 'Cargo.lock')
 
-  await cxExec(`git commit --no-verify --amend -C HEAD ${packageJsonPath} ${packageLockJsonPath} ${cargoTomlPath}`, {
-    SKIP_PREPARE_COMMIT_MSG: '1',
-  })
+  await cxExec(
+    `git commit --no-verify --amend -C HEAD ${packageJsonPath} ${packageLockJsonPath} ${cargoTomlPath} ${cargoLockPath}`,
+    {
+      SKIP_PREPARE_COMMIT_MSG: '1',
+    }
+  )
   console.log('Updated previous commit to use the correct package version')
 }
 
