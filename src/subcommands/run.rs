@@ -13,11 +13,11 @@ extern crate atty;
 extern crate exitcode;
 extern crate nix;
 extern crate which;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
 use crate::directories::{check_if_inside_project_dir, get_project_path};
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 pub(crate) fn run_subcommand() -> () {
     let project_path = match get_project_path() {

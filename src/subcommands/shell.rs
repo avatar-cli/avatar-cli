@@ -22,8 +22,8 @@ use crate::avatar_env::{
 };
 use crate::directories::get_project_path;
 use crate::project_config::{
-    get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock,
-    OCIImageConfig, ProjectConfig, ProjectConfigLock,
+    get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock, OCIImageConfig,
+    ProjectConfig, ProjectConfigLock,
 };
 use ring::digest::{digest, Digest, SHA256};
 

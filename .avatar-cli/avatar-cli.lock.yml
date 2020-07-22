@@ -1,17 +1,27 @@
 ---
-projectConfigHash: 0e1dc1e63997681f8ed789f277084f3c90b6f913a8ae457bada7cb13b6fcc7b7
+projectConfigHash: f14d961275b38c6470d6061454cc8e5360ca1ce960d3f1099a23073fe78a4461
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
     14-buster: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
 binaries:
-  customsh:
+  npm:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: sh
+    path: npm
     runConfig: ~
   node:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
     path: node
+    runConfig: ~
+  npx:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: npx
+    runConfig: ~
+  yarn:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: yarn
     runConfig: ~

@@ -7,5 +7,9 @@ images:
       binaries:
         node:
           path: node
-        customsh:
-          path: sh
+        npm:
+          path: npm
+        npx:
+          path: npx
+        yarn:
+          path: yarn

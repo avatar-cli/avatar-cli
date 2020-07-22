@@ -4,20 +4,31 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-pub(crate) mod run;
-pub(crate) mod shell;
-
-use std::process::exit;
+use std::{env, path::PathBuf, process::exit};
 
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
-const AVATAR_CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub(crate) mod init;
+pub(crate) mod run;
+pub(crate) mod shell;
+
+pub(crate) const AVATAR_CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub(crate) fn select() -> () {
     let matches = App::new("avatar")
         .version(AVATAR_CLI_VERSION)
         .setting(AppSettings::SubcommandRequired)
+        .subcommand(
+            SubCommand::with_name("init")
+                .about("It generates a new Avatar-CLI project configuration")
+                .arg(
+                    Arg::with_name("project_path")
+                        .short("p")
+                        .value_name("DIRECTORY")
+                        .required(false),
+                ),
+        )
         .subcommand(
             SubCommand::with_name("shell")
                 .about("Starts a new subshell exposing the wrapped project tools"),
@@ -38,6 +49,20 @@ pub(crate) fn select() -> () {
         Some(subcommand_name) => match subcommand_name {
             "avatar" => exit(exitcode::OK),
             "avatar-cli" => exit(exitcode::OK),
+            "init" => {
+                let init_matches = matches.subcommand_matches("init").unwrap();
+                let project_path = match init_matches.value_of("project_path") {
+                    Some(p) => PathBuf::from(p),
+                    None => match env::current_dir() {
+                        Ok(p) => p,
+                        Err(_) => {
+                            eprintln!("Unable to get current working directory");
+                            exit(exitcode::OSERR)
+                        }
+                    },
+                };
+                init::init_subcommand(&project_path)
+            }
             "run" => run::run_subcommand(),
             "shell" => shell::shell_subcommand(),
             _ => {

@@ -12,10 +12,12 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::vec::Vec;
 
+extern crate ring;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use ring::digest::{digest, Digest, SHA256};
 use serde::{Deserialize, Serialize};
 
-extern crate ring;
-use ring::digest::{digest, Digest, SHA256};
+use crate::subcommands::AVATAR_CLI_VERSION;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct VolumeConfig {
@@ -65,6 +67,16 @@ pub(crate) struct ProjectConfig {
 }
 
 impl ProjectConfig {
+    pub fn new() -> ProjectConfig {
+        let prj_internal_id: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+
+        ProjectConfig {
+            version: AVATAR_CLI_VERSION.to_string(),
+            projectInternalId: prj_internal_id,
+            images: None,
+        }
+    }
+
     pub fn getProjectInternalId(&self) -> &String {
         &self.projectInternalId
     }
@@ -251,6 +263,26 @@ pub(crate) fn get_config(config_filepath: &PathBuf) -> (ProjectConfig, Digest) {
         },
         digest(&SHA256, &config_bytes),
     )
+}
+
+pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) -> () {
+    match serde_yaml::to_vec(config) {
+        Ok(serialized_config) => {
+            if let Err(e) = write(config_filepath, &serialized_config) {
+                eprintln!(
+                    "Unknown error while persisting project config:\n\n{}\n",
+                    e.to_string()
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Unknown error while serializing project config:\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::SOFTWARE)
+        }
+    }
 }
 
 pub(crate) fn save_config_lock(
