@@ -282,6 +282,11 @@ fn get_binaries_settings(
                                 }
                             };
 
+                            if dst_binaries.contains_key(binary_name) {
+                                eprintln!("Duplicated binary definition for '{}'", binary_name);
+                                exit(exitcode::DATAERR)
+                            }
+
                             dst_binaries.insert(
                                 binary_name.clone(),
                                 ImageBinaryConfigLock::new(
