@@ -4,7 +4,7 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-use std::fs::{create_dir, remove_dir_all, read, write};
+use std::fs::{create_dir, read, remove_dir_all, write};
 use std::{path::PathBuf, process::exit};
 
 extern crate exitcode;
@@ -60,38 +60,50 @@ pub(crate) fn init_subcommand(project_path: &PathBuf) -> () {
 }
 
 fn patch_gitignore(project_path: &PathBuf) -> () {
-  let gitignore_path = project_path.join(".gitignore");
+    let gitignore_path = project_path.join(".gitignore");
 
-  if gitignore_path.exists() {
-    if !gitignore_path.is_file() {
-      eprintln!("The file .gitignore must be a file, but found something else.");
-      exit(exitcode::USAGE)
-    }
+    if gitignore_path.exists() {
+        if !gitignore_path.is_file() {
+            eprintln!("The file .gitignore must be a file, but found something else.");
+            exit(exitcode::USAGE)
+        }
 
-    let mut gitignore_bytes = match read(&gitignore_path) {
-      Ok(t) => t,
-      Err(e) => {
-        eprintln!("Unable to read .gitignore file due to unknwon reasons.\n\n{}\n", e.to_string());
-        exit(exitcode::IOERR)
-      }
-    };
+        let mut gitignore_bytes = match read(&gitignore_path) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!(
+                    "Unable to read .gitignore file due to unknwon reasons.\n\n{}\n",
+                    e.to_string()
+                );
+                exit(exitcode::IOERR)
+            }
+        };
 
-    if String::from_utf8_lossy(&gitignore_bytes).contains(".avatar-cli/volatile") == false {
-      // TODO: Optimize this, just append, instead of rewriting the entire file
-      gitignore_bytes.extend("\n# Avatar-CLI\n.avatar-cli/volatile/\n".as_bytes());
-      if let Err(e) = write(&gitignore_path, gitignore_bytes) {
-        eprintln!("Unable to modify .gitignore file due to unknown reasons.\n\n{}\n", e.to_string());
-        exit(exitcode::IOERR);
-      }
-    }
-  } else {
-    if !project_path.join(".git").exists() {
-      return
-    }
+        if String::from_utf8_lossy(&gitignore_bytes).contains(".avatar-cli/volatile") == false {
+            // TODO: Optimize this, just append, instead of rewriting the entire file
+            gitignore_bytes.extend("\n# Avatar-CLI\n.avatar-cli/volatile/\n".as_bytes());
+            if let Err(e) = write(&gitignore_path, gitignore_bytes) {
+                eprintln!(
+                    "Unable to modify .gitignore file due to unknown reasons.\n\n{}\n",
+                    e.to_string()
+                );
+                exit(exitcode::IOERR);
+            }
+        }
+    } else {
+        if !project_path.join(".git").exists() {
+            return;
+        }
 
-    if let Err(e) = write(&gitignore_path, "# Avatar-CLI\n.avatar-cli/volatile/\n".as_bytes()) {
-      eprintln!("Unable to create .gitignore file due to unknown reasons.\n\n{}\n", e.to_string());
-      exit(exitcode::CANTCREAT);
+        if let Err(e) = write(
+            &gitignore_path,
+            "# Avatar-CLI\n.avatar-cli/volatile/\n".as_bytes(),
+        ) {
+            eprintln!(
+                "Unable to create .gitignore file due to unknown reasons.\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::CANTCREAT);
+        }
     }
-  }
 }
