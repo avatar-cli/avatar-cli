@@ -63,8 +63,11 @@ pub(crate) fn shell_subcommand() -> () {
 
     let path_var = match env::var("PATH") {
         Ok(p) => p,
-        Err(_) => {
-            eprintln!("Unable to load PATH environment variable");
+        Err(e) => {
+            eprintln!(
+                "Unable to load PATH environment variable\n\n{}\n",
+                e.to_string()
+            );
             exit(exitcode::OSERR)
         }
     };
