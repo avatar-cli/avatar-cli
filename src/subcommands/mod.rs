@@ -10,6 +10,7 @@ extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
 pub(crate) mod init;
+pub(crate) mod install;
 pub(crate) mod run;
 pub(crate) mod shell;
 
@@ -28,6 +29,10 @@ pub(crate) fn select() -> () {
                         .value_name("DIRECTORY")
                         .required(false),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name("install")
+                .about("It 'installs' all the project stated dependencies"),
         )
         .subcommand(
             SubCommand::with_name("shell")
@@ -62,7 +67,8 @@ pub(crate) fn select() -> () {
                     },
                 };
                 init::init_subcommand(&project_path)
-            }
+            },
+            "install" => install::install_subcommand(),
             "run" => run::run_subcommand(),
             "shell" => shell::shell_subcommand(),
             _ => {
