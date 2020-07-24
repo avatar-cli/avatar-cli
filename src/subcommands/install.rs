@@ -291,6 +291,7 @@ fn get_binaries_settings(
                                     image_name.clone(),
                                     image_hash.clone(),
                                     binary_config.getPath().clone(),
+                                    binary_config.getRunConfig().clone()
                                 ),
                             );
                         }

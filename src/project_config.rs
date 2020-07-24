@@ -5,7 +5,7 @@
  */
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 use std::fs::{read, write};
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -32,6 +32,8 @@ pub(crate) struct BindingConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct OCIContainerRunConfig {
+    env: Option<HashMap<String, String>>,
+    envFromHost: Option<HashSet<String>>,
     volumes: Option<Vec<VolumeConfig>>,
     bindings: Option<Vec<BindingConfig>>,
 }
@@ -45,6 +47,10 @@ pub(crate) struct ImageBinaryConfig {
 impl ImageBinaryConfig {
     pub fn getPath(&self) -> &PathBuf {
         &self.path
+    }
+
+    pub fn getRunConfig(&self) -> &Option<OCIContainerRunConfig> {
+        &self.runConfig
     }
 }
 
@@ -103,12 +109,12 @@ pub(crate) struct ImageBinaryConfigLock {
 }
 
 impl ImageBinaryConfigLock {
-    pub fn new(ociImageName: String, ociImageHash: String, path: PathBuf) -> ImageBinaryConfigLock {
+    pub fn new(ociImageName: String, ociImageHash: String, path: PathBuf, runConfig: Option<OCIContainerRunConfig>) -> ImageBinaryConfigLock {
         ImageBinaryConfigLock {
             ociImageName: ociImageName,
             ociImageHash: ociImageHash,
             path: path,
-            runConfig: None, // TODO
+            runConfig: runConfig,
         }
     }
 
