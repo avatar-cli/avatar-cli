@@ -1,5 +1,11 @@
 # Contributing Guidelines
 
+Avatar-CLI is being developed in Gitlab, all contributions must be sent there:
+[Avatar-CLI Gitlab repository](https://gitlab.com/avatar-cli/avatar-cli).
+
+The [Github repository](https://github.com/avatar-cli/avatar-cli) just acts as a
+mirror.
+
 ## Acceptance Criteria
 
 In order for us to accept contributions, the merge request must fulfill certain
