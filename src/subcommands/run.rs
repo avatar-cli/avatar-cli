@@ -156,6 +156,25 @@ fn run_docker_command(
         interactive_options.push("-t")
     }
 
+    let mut dynamic_env: Vec<String> = Vec::new();
+    if let Some(runConfig) = binary_configuration.getRunConfig() {
+        if let Some(used_defined_env_vars) = runConfig.getEnv() {
+            for (var_name, var_value) in used_defined_env_vars {
+                dynamic_env.push("--env".to_string());
+                dynamic_env.push(format!("{}={}", var_name, var_value));
+            }
+        }
+
+        if let Some(host_var_names) = runConfig.getEnvFromHost() {
+            for var_name in host_var_names {
+                if let Ok(var_value) = env::var(var_name) {
+                    dynamic_env.push("--env".to_string());
+                    dynamic_env.push(format!("{}={}", var_name, var_value));
+                }
+            }
+        }
+    }
+
     let working_dir = match current_dir.strip_prefix(project_path) {
         Ok(wd) => wd,
         Err(_) => {
@@ -177,6 +196,7 @@ fn run_docker_command(
     Command::new("docker")
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
+        .args(dynamic_env)
         .args(&[
             "--name",
             &format!(

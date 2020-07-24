@@ -38,6 +38,16 @@ pub(crate) struct OCIContainerRunConfig {
     bindings: Option<Vec<BindingConfig>>,
 }
 
+impl OCIContainerRunConfig {
+    pub fn getEnv(&self) -> &Option<HashMap<String, String>> {
+        &self.env
+    }
+
+    pub fn getEnvFromHost(&self) -> &Option<HashSet<String>> {
+        &self.envFromHost
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ImageBinaryConfig {
     path: PathBuf,
@@ -128,6 +138,10 @@ impl ImageBinaryConfigLock {
 
     pub fn getPath(&self) -> &PathBuf {
         &self.path
+    }
+
+    pub fn getRunConfig(&self) -> &Option<OCIContainerRunConfig> {
+        &self.runConfig
     }
 }
 
