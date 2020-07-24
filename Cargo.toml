@@ -1,12 +1,19 @@
 [package]
 name = "avatar-cli"
 version = "0.10.2"
+license = "GPL-3.0"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
-edition = "2018"
+keywords = ["avatar", "avatar-cli", "docker", "containers"]
+categories = ["config", "command-line-utilities", "development-tools", "emulators"]
 description = "Magic wrapper to run containerized CLI tools"
-license-file = "LICENSE"
+readme = "README.md"
 repository = "https://gitlab.com/avatar-cli/avatar-cli.git"
-exclude = [ ".avatar-cli/*", "cx/*" ]
+edition = "2018"
+include = [ "src/**/*", "Cargo.toml", "Cargo.lock" ]
+
+[badges]
+gitlab = { repository = "https://gitlab.com/avatar-cli/avatar-cli.git", branch = "main" }
+maintenance = { status = "experimental" }
 
 [dependencies]
 atty = "0.2"
