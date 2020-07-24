@@ -160,6 +160,11 @@ fn run_docker_command(
     if let Some(runConfig) = binary_configuration.getRunConfig() {
         if let Some(used_defined_env_vars) = runConfig.getEnv() {
             for (var_name, var_value) in used_defined_env_vars {
+                if var_name == "PATH" {
+                    eprintln!("Passing a custom PATH environment variable is forbidden");
+                    exit(exitcode::USAGE)
+                }
+
                 dynamic_env.push("--env".to_string());
                 dynamic_env.push(format!("{}={}", var_name, var_value));
             }
@@ -167,6 +172,11 @@ fn run_docker_command(
 
         if let Some(host_var_names) = runConfig.getEnvFromHost() {
             for var_name in host_var_names {
+                if var_name == "PATH" {
+                    eprintln!("Passing a custom PATH environment variable is forbidden");
+                    exit(exitcode::USAGE)
+                }
+
                 if let Ok(var_value) = env::var(var_name) {
                     dynamic_env.push("--env".to_string());
                     dynamic_env.push(format!("{}={}", var_name, var_value));
