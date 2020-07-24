@@ -7,6 +7,8 @@
 use std::{
     collections::HashMap,
     env,
+    fs::{copy, create_dir_all, remove_dir_all},
+    os::unix::fs::symlink,
     path::PathBuf,
     process::{exit, Command},
     str::from_utf8,
@@ -47,18 +49,30 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         .join("volatile")
         .join("state.yml");
 
-    let project_state =
+    let (project_state, changed_state) =
         check_project_settings(&config_path, &config_lock_path, &project_state_path);
-    check_oci_images_availability(&project_state);
+    let pulled_oci_images = check_oci_images_availability(&project_state);
+    populate_volatile_bin_dir(
+        &project_path,
+        &project_state,
+        pulled_oci_images || changed_state,
+    );
 
-    (project_path, config_path, config_lock_path, project_state_path, project_state)
+    (
+        project_path,
+        config_path,
+        config_lock_path,
+        project_state_path,
+        project_state,
+    )
 }
 
 fn check_project_settings(
     config_path: &PathBuf,
     config_lock_path: &PathBuf,
     project_state_path: &PathBuf,
-) -> ProjectConfigLock {
+) -> (ProjectConfigLock, bool) {
+    let mut changed_state = false;
     let (config, config_hash) = get_config(&config_path);
 
     let (config_lock, config_lock_hash) = match config_lock_path.exists() {
@@ -74,12 +88,16 @@ fn check_project_settings(
             let (_config_lock, _config_lock_hash) = get_config_lock(&config_lock_path);
 
             if config_hash.as_ref() != &_config_lock.getProjectConfigHash()[..] {
+                changed_state = true;
                 generate_config_lock(config_lock_path, &config, &config_hash)
             } else {
                 (_config_lock, _config_lock_hash)
             }
         }
-        false => generate_config_lock(config_lock_path, &config, &config_hash),
+        false => {
+            changed_state = true;
+            generate_config_lock(config_lock_path, &config, &config_hash)
+        }
     };
 
     let project_state = match project_state_path.exists() {
@@ -95,6 +113,7 @@ fn check_project_settings(
             let (_project_state, _) = get_config_lock(&project_state_path);
 
             if config_lock_hash.as_ref() != &_project_state.getProjectConfigHash()[..] {
+                changed_state = true;
                 update_project_state(
                     project_state_path,
                     config_lock.clone(),
@@ -104,14 +123,17 @@ fn check_project_settings(
                 _project_state
             }
         }
-        false => update_project_state(
-            project_state_path,
-            config_lock.clone(),
-            config_lock_hash.as_ref(),
-        ),
+        false => {
+            changed_state = true;
+            update_project_state(
+                project_state_path,
+                config_lock.clone(),
+                config_lock_hash.as_ref(),
+            )
+        }
     };
 
-    return project_state;
+    (project_state, changed_state)
 }
 
 fn generate_config_lock(
@@ -273,13 +295,15 @@ fn get_binaries_settings(
     dst_binaries
 }
 
-fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
+fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
     let images = project_state.getImages();
 
     if let Err(_) = which::which("docker") {
         eprintln!("docker client is not available");
         exit(exitcode::UNAVAILABLE)
     }
+
+    let mut changed_state = false;
 
     for (image_name, image_tags) in images.iter() {
         for (_, image_hash) in image_tags.iter() {
@@ -290,7 +314,8 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        pull_oci_image_by_hash(format!("{}@sha256:{}", image_name, image_hash))
+                        pull_oci_image_by_hash(format!("{}@sha256:{}", image_name, image_hash));
+                        changed_state = true;
                     }
                 }
                 Err(err) => {
@@ -305,6 +330,8 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> () {
             }
         }
     }
+
+    changed_state
 }
 
 fn pull_oci_image_by_hash(image_ref: String) -> () {
@@ -316,5 +343,70 @@ fn pull_oci_image_by_hash(image_ref: String) -> () {
             err.to_string()
         );
         exit(exitcode::UNAVAILABLE)
+    }
+}
+
+fn populate_volatile_bin_dir(
+    project_path: &PathBuf,
+    project_state: &ProjectConfigLock,
+    changed_state: bool,
+) -> () {
+    let bin_path = project_path
+        .join(".avatar-cli")
+        .join("volatile")
+        .join("bin");
+
+    if bin_path.exists() {
+        if !bin_path.is_dir() {
+            eprintln!("");
+            exit(exitcode::USAGE)
+        }
+
+        if !changed_state {
+            return;
+        }
+
+        if let Err(e) = remove_dir_all(&bin_path) {
+            eprintln!(
+                "Unable to delete broken bin directory {}\n\n{}\n",
+                bin_path.display(),
+                e.to_string()
+            );
+            exit(exitcode::IOERR)
+        }
+    }
+
+    if let Err(_) = create_dir_all(&bin_path) {
+        eprintln!("Unable to create directory {}", bin_path.display());
+        exit(exitcode::CANTCREAT)
+    }
+
+    let avatar_path = match env::current_exe() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "Unable to retrieve avatar's binary path.\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    };
+
+    let managed_avatar_path = bin_path.join("avatar");
+
+    if let Err(e) = copy(&avatar_path, &managed_avatar_path) {
+        eprintln!(
+            "Unable to copy avatar binary to {}\n\n{}\n",
+            bin_path.display(),
+            e.to_string()
+        );
+        exit(exitcode::IOERR)
+    }
+
+    for binary_name in project_state.getBinaryNames() {
+        if let Err(_) = symlink(&managed_avatar_path, bin_path.join(binary_name)) {
+            eprintln!("Unable to create symlink to {} binary", binary_name);
+            exit(exitcode::CANTCREAT)
+        }
     }
 }

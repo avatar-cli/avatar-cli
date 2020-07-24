@@ -156,6 +156,12 @@ impl ProjectConfigLock {
         self.binaries.get(binary_name)
     }
 
+    pub fn getBinaryNames(
+        &self,
+    ) -> std::collections::hash_map::Keys<'_, std::string::String, ImageBinaryConfigLock> {
+        self.binaries.keys()
+    }
+
     pub fn new(
         projectConfigHash: Vec<u8>,
         projectInternalId: String,

@@ -68,7 +68,9 @@ pub(crate) fn select() -> () {
                 };
                 init::init_subcommand(&project_path)
             }
-            "install" => { install::install_subcommand(); },
+            "install" => {
+                install::install_subcommand();
+            }
             "run" => run::run_subcommand(),
             "shell" => shell::shell_subcommand(),
             _ => {

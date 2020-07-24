@@ -52,9 +52,7 @@ pub(crate) fn get_used_program_name() -> String {
     let first_arg = match env::args().nth(0) {
         Some(a) => a,
         None => {
-            eprintln!(
-              "Due to an unknown reason, it was impossible to retrieve the command arguments list"
-          );
+            eprintln!("Due to an unknown reason, it was impossible to retrieve the command arguments list");
             exit(exitcode::OSERR);
         }
     };
