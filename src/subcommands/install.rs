@@ -125,6 +125,15 @@ fn check_project_settings(
         }
         false => {
             changed_state = true;
+
+            let volatile_dir = project_state_path.parent().unwrap();
+            if !volatile_dir.exists() {
+                if let Err(_) = create_dir_all(volatile_dir) {
+                    eprintln!("Unable to create directory {}", volatile_dir.display());
+                    exit(exitcode::CANTCREAT)
+                }
+            }
+
             update_project_state(
                 project_state_path,
                 config_lock.clone(),

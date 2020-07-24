@@ -279,6 +279,7 @@ pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) -> 
                     "Unknown error while persisting project config:\n\n{}\n",
                     e.to_string()
                 );
+                exit(exitcode::IOERR)
             }
         }
         Err(e) => {
