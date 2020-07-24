@@ -96,7 +96,7 @@ fn run(
     let (_, config_hash) = get_config(&config_path);
     let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
 
-    if &config_hash.as_ref() != &&config_lock.getProjectConfigHash()[..] {
+    if &config_hash.as_ref() != &&config_lock.get_project_config_hash()[..] {
         eprintln!(
         "The hash for the file '{}' does not match with the one in '{}', considering exiting the avatar subshell and entering again",
         config_path.display(),
@@ -107,7 +107,7 @@ fn run(
 
     let (project_state, _) = get_config_lock(&project_state_path);
 
-    if &config_lock_hash.as_ref() != &&project_state.getProjectConfigHash()[..] {
+    if &config_lock_hash.as_ref() != &&project_state.get_project_config_hash()[..] {
         eprintln!(
         "The hash for the file '{}' does not match with the one in '{}', considering exiting the avatar subshell and entering again",
         config_lock_path.display(),
@@ -116,7 +116,7 @@ fn run(
         exit(exitcode::DATAERR)
     }
 
-    let binary_configuration = match project_state.getBinaryConfiguration(&used_program_name) {
+    let binary_configuration = match project_state.get_binary_configuration(&used_program_name) {
         Some(c) => c,
         None => {
             eprintln!(
@@ -132,7 +132,7 @@ fn run(
         binary_configuration,
         &current_dir,
         project_path,
-        project_state.getProjectInternalId(),
+        project_state.get_project_internal_id(),
         session_token,
         skip_args,
     );
@@ -157,8 +157,8 @@ fn run_docker_command(
     }
 
     let mut dynamic_env: Vec<String> = Vec::new();
-    if let Some(runConfig) = binary_configuration.getRunConfig() {
-        if let Some(used_defined_env_vars) = runConfig.getEnv() {
+    if let Some(run_config) = binary_configuration.get_run_config() {
+        if let Some(used_defined_env_vars) = run_config.get_env() {
             for (var_name, var_value) in used_defined_env_vars {
                 if var_name == "PATH" {
                     eprintln!("Passing a custom PATH environment variable is forbidden");
@@ -170,7 +170,7 @@ fn run_docker_command(
             }
         }
 
-        if let Some(host_var_names) = runConfig.getEnvFromHost() {
+        if let Some(host_var_names) = run_config.get_env_from_host() {
             for var_name in host_var_names {
                 if var_name == "PATH" {
                     eprintln!("Passing a custom PATH environment variable is forbidden");
@@ -198,7 +198,7 @@ fn run_docker_command(
         Some(pn) => pn,
         None => "xxx",
     };
-    let program_name = match binary_configuration.getPath().file_name().unwrap().to_str() {
+    let program_name = match binary_configuration.get_path().file_name().unwrap().to_str() {
         Some(pn) => pn,
         None => "yyy",
     };
@@ -231,10 +231,10 @@ fn run_docker_command(
         ])
         .arg(format!(
             "{}@sha256:{}",
-            binary_configuration.getOCIImageName(),
-            binary_configuration.getOCIImageHash()
+            binary_configuration.get_oci_image_name(),
+            binary_configuration.get_oci_image_hash()
         ))
-        .arg(binary_configuration.getPath())
+        .arg(binary_configuration.get_path())
         .args(env::args().skip(skip_args))
         .exec(); // Only for UNIX
 }

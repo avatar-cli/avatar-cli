@@ -87,7 +87,7 @@ fn check_project_settings(
 
             let (_config_lock, _config_lock_hash) = get_config_lock(&config_lock_path);
 
-            if config_hash.as_ref() != &_config_lock.getProjectConfigHash()[..] {
+            if config_hash.as_ref() != &_config_lock.get_project_config_hash()[..] {
                 changed_state = true;
                 generate_config_lock(config_lock_path, &config, &config_hash)
             } else {
@@ -112,7 +112,7 @@ fn check_project_settings(
 
             let (_project_state, _) = get_config_lock(&project_state_path);
 
-            if config_lock_hash.as_ref() != &_project_state.getProjectConfigHash()[..] {
+            if config_lock_hash.as_ref() != &_project_state.get_project_config_hash()[..] {
                 changed_state = true;
                 update_project_state(
                     project_state_path,
@@ -155,7 +155,7 @@ fn generate_config_lock(
 
     let config_lock = ProjectConfigLock::new(
         Vec::<u8>::from(config_hash.as_ref()),
-        config.getProjectInternalId().clone(),
+        config.get_project_internal_id().clone(),
         image_hashes,
         binaries_settings,
     );
@@ -169,13 +169,13 @@ fn update_project_state(
     mut project_state: ProjectConfigLock,
     config_lock_hash: &[u8],
 ) -> ProjectConfigLock {
-    project_state = project_state.updateProjectConfigHash(config_lock_hash);
+    project_state = project_state.update_project_config_hash(config_lock_hash);
     save_config_lock(project_state_path, &project_state);
     project_state
 }
 
 fn get_image_hashes(config: &ProjectConfig) -> HashMap<String, HashMap<String, String>> {
-    match config.getImages() {
+    match config.get_images() {
         Some(images) => images.iter().map(replace_configs_by_hashes).collect(),
         None => HashMap::new(),
     }
@@ -256,10 +256,10 @@ fn get_binaries_settings(
 ) -> HashMap<String, ImageBinaryConfigLock> {
     let mut dst_binaries: HashMap<String, ImageBinaryConfigLock> = HashMap::new();
 
-    if let Some(images) = config.getImages() {
+    if let Some(images) = config.get_images() {
         for (image_name, image_tags) in images {
             for (image_tag, image_config) in image_tags {
-                match image_config.getBinaries() {
+                match image_config.get_binaries() {
                     Some(src_binaries) => {
                         for (binary_name, binary_config) in src_binaries {
                             let image_hash = match images_name_tag_hash_rel.get(image_name) {
@@ -290,8 +290,8 @@ fn get_binaries_settings(
                                 ImageBinaryConfigLock::new(
                                     image_name.clone(),
                                     image_hash.clone(),
-                                    binary_config.getPath().clone(),
-                                    binary_config.getRunConfig().clone()
+                                    binary_config.get_path().clone(),
+                                    binary_config.get_run_config().clone()
                                 ),
                             );
                         }
@@ -306,7 +306,7 @@ fn get_binaries_settings(
 }
 
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
-    let images = project_state.getImages();
+    let images = project_state.get_images();
 
     if let Err(_) = which::which("docker") {
         eprintln!("docker client is not available");
@@ -413,7 +413,7 @@ fn populate_volatile_bin_dir(
         exit(exitcode::IOERR)
     }
 
-    for binary_name in project_state.getBinaryNames() {
+    for binary_name in project_state.get_binary_names() {
         if let Err(_) = symlink(&managed_avatar_path, bin_path.join(binary_name)) {
             eprintln!("Unable to create symlink to {} binary", binary_name);
             exit(exitcode::CANTCREAT)

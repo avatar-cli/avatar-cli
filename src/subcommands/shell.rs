@@ -49,7 +49,7 @@ pub(crate) fn shell_subcommand() -> () {
         .env(CONFIG_PATH, config_path)
         .env(CONFIG_LOCK_PATH, config_lock_path)
         .env(PROJECT_PATH, project_path)
-        .env(PROJECT_INTERNAL_ID, project_state.getProjectInternalId())
+        .env(PROJECT_INTERNAL_ID, project_state.get_project_internal_id())
         .env(SESSION_TOKEN, session_token)
         .env(STATE_PATH, project_state_path)
         .exec();

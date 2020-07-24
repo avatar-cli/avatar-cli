@@ -3,7 +3,6 @@
  *  Copyright (C) 2019-2020  Andres Correa Casablanca
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
-#![allow(non_snake_case)]
 
 use std::collections::{HashSet, HashMap};
 use std::fs::{read, write};
@@ -20,47 +19,51 @@ use serde::{Deserialize, Serialize};
 use crate::subcommands::AVATAR_CLI_VERSION;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct VolumeConfig {
-    containerPath: PathBuf,
+    container_path: PathBuf,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BindingConfig {
-    hostPath: PathBuf,
-    containerPath: PathBuf,
+    host_path: PathBuf,
+    container_path: PathBuf,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct OCIContainerRunConfig {
     env: Option<HashMap<String, String>>,
-    envFromHost: Option<HashSet<String>>,
+    env_from_host: Option<HashSet<String>>,
     volumes: Option<Vec<VolumeConfig>>,
     bindings: Option<Vec<BindingConfig>>,
 }
 
 impl OCIContainerRunConfig {
-    pub fn getEnv(&self) -> &Option<HashMap<String, String>> {
+    pub fn get_env(&self) -> &Option<HashMap<String, String>> {
         &self.env
     }
 
-    pub fn getEnvFromHost(&self) -> &Option<HashSet<String>> {
-        &self.envFromHost
+    pub fn get_env_from_host(&self) -> &Option<HashSet<String>> {
+        &self.env_from_host
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfig {
     path: PathBuf,
-    runConfig: Option<OCIContainerRunConfig>,
+    run_config: Option<OCIContainerRunConfig>,
 }
 
 impl ImageBinaryConfig {
-    pub fn getPath(&self) -> &PathBuf {
+    pub fn get_path(&self) -> &PathBuf {
         &self.path
     }
 
-    pub fn getRunConfig(&self) -> &Option<OCIContainerRunConfig> {
-        &self.runConfig
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+        &self.run_config
     }
 }
 
@@ -70,15 +73,16 @@ pub(crate) struct OCIImageConfig {
 }
 
 impl OCIImageConfig {
-    pub fn getBinaries(&self) -> &Option<HashMap<String, ImageBinaryConfig>> {
+    pub fn get_binaries(&self) -> &Option<HashMap<String, ImageBinaryConfig>> {
         &self.binaries
     }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ProjectConfig {
     version: String,
-    projectInternalId: String,
+    project_internal_id: String,
     images: Option<HashMap<String, HashMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
 }
 
@@ -88,16 +92,16 @@ impl ProjectConfig {
 
         ProjectConfig {
             version: AVATAR_CLI_VERSION.to_string(),
-            projectInternalId: prj_internal_id,
+            project_internal_id: prj_internal_id,
             images: None,
         }
     }
 
-    pub fn getProjectInternalId(&self) -> &String {
-        &self.projectInternalId
+    pub fn get_project_internal_id(&self) -> &String {
+        &self.project_internal_id
     }
 
-    pub fn getImages(&self) -> &Option<HashMap<String, HashMap<String, OCIImageConfig>>> {
+    pub fn get_images(&self) -> &Option<HashMap<String, HashMap<String, OCIImageConfig>>> {
         &self.images
     }
 }
@@ -111,86 +115,88 @@ pub(crate) struct OCIImageConfigLock {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfigLock {
-    ociImageName: String,
-    ociImageHash: String,
+    oci_image_name: String,
+    oci_image_hash: String,
     path: PathBuf,
-    runConfig: Option<OCIContainerRunConfig>,
+    run_config: Option<OCIContainerRunConfig>,
 }
 
 impl ImageBinaryConfigLock {
-    pub fn new(ociImageName: String, ociImageHash: String, path: PathBuf, runConfig: Option<OCIContainerRunConfig>) -> ImageBinaryConfigLock {
+    pub fn new(oci_image_name: String, oci_image_hash: String, path: PathBuf, run_config: Option<OCIContainerRunConfig>) -> ImageBinaryConfigLock {
         ImageBinaryConfigLock {
-            ociImageName: ociImageName,
-            ociImageHash: ociImageHash,
+            oci_image_name: oci_image_name,
+            oci_image_hash: oci_image_hash,
             path: path,
-            runConfig: runConfig,
+            run_config: run_config,
         }
     }
 
-    pub fn getOCIImageName(&self) -> &String {
-        &self.ociImageName
+    pub fn get_oci_image_name(&self) -> &String {
+        &self.oci_image_name
     }
 
-    pub fn getOCIImageHash(&self) -> &String {
-        &self.ociImageHash
+    pub fn get_oci_image_hash(&self) -> &String {
+        &self.oci_image_hash
     }
 
-    pub fn getPath(&self) -> &PathBuf {
+    pub fn get_path(&self) -> &PathBuf {
         &self.path
     }
 
-    pub fn getRunConfig(&self) -> &Option<OCIContainerRunConfig> {
-        &self.runConfig
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+        &self.run_config
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
-    projectConfigHash: Vec<u8>,
-    projectInternalId: String,
+    project_config_hash: Vec<u8>,
+    project_internal_id: String,
     images: HashMap<String, HashMap<String, String>>, // image_name -> image_tag -> image_hash
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }
 
 impl ProjectConfigLock {
-    pub fn getProjectConfigHash(&self) -> &Vec<u8> {
-        &self.projectConfigHash
+    pub fn get_project_config_hash(&self) -> &Vec<u8> {
+        &self.project_config_hash
     }
 
-    pub fn updateProjectConfigHash(mut self, new_hash: &[u8]) -> ProjectConfigLock {
-        self.projectConfigHash = Vec::from(new_hash);
+    pub fn update_project_config_hash(mut self, new_hash: &[u8]) -> ProjectConfigLock {
+        self.project_config_hash = Vec::from(new_hash);
         self
     }
 
-    pub fn getProjectInternalId(&self) -> &String {
-        &self.projectInternalId
+    pub fn get_project_internal_id(&self) -> &String {
+        &self.project_internal_id
     }
 
-    pub fn getImages(&self) -> &HashMap<String, HashMap<String, String>> {
+    pub fn get_images(&self) -> &HashMap<String, HashMap<String, String>> {
         &self.images
     }
 
-    pub fn getBinaryConfiguration(&self, binary_name: &str) -> Option<&ImageBinaryConfigLock> {
+    pub fn get_binary_configuration(&self, binary_name: &str) -> Option<&ImageBinaryConfigLock> {
         self.binaries.get(binary_name)
     }
 
-    pub fn getBinaryNames(
+    pub fn get_binary_names(
         &self,
     ) -> std::collections::hash_map::Keys<'_, std::string::String, ImageBinaryConfigLock> {
         self.binaries.keys()
     }
 
     pub fn new(
-        projectConfigHash: Vec<u8>,
-        projectInternalId: String,
+        project_config_hash: Vec<u8>,
+        project_internal_id: String,
         images: HashMap<String, HashMap<String, String>>,
         binaries: HashMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {
-            projectConfigHash: projectConfigHash,
-            projectInternalId: projectInternalId,
+            project_config_hash: project_config_hash,
+            project_internal_id: project_internal_id,
             images: images,
             binaries: binaries,
         }
