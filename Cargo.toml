@@ -1,8 +1,12 @@
 [package]
 name = "avatar-cli"
-version = "0.10.1"
+version = "0.10.2"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
 edition = "2018"
+description = "Magic wrapper to run containerized CLI tools"
+license-file = "LICENSE"
+repository = "https://gitlab.com/avatar-cli/avatar-cli.git"
+exclude = [ ".avatar-cli/*", "cx/*" ]
 
 [dependencies]
 atty = "0.2"
