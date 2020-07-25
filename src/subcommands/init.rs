@@ -14,7 +14,7 @@ use crate::{
     project_config::{save_config, ProjectConfig},
 };
 
-pub(crate) fn init_subcommand(project_path: &PathBuf) -> () {
+pub(crate) fn init_subcommand(project_path: &PathBuf) {
     if let Some(p) = get_project_path() {
         eprintln!(
             "avatar init cannot create a new project over an existing one, in {}",
@@ -59,7 +59,7 @@ pub(crate) fn init_subcommand(project_path: &PathBuf) -> () {
     patch_gitignore(project_path);
 }
 
-fn patch_gitignore(project_path: &PathBuf) -> () {
+fn patch_gitignore(project_path: &PathBuf) {
     let gitignore_path = project_path.join(".gitignore");
 
     if gitignore_path.exists() {
@@ -79,7 +79,7 @@ fn patch_gitignore(project_path: &PathBuf) -> () {
             }
         };
 
-        if String::from_utf8_lossy(&gitignore_bytes).contains(".avatar-cli/volatile") == false {
+        if !String::from_utf8_lossy(&gitignore_bytes).contains(".avatar-cli/volatile") {
             // TODO: Optimize this, just append, instead of rewriting the entire file
             gitignore_bytes.extend("\n# Avatar-CLI\n.avatar-cli/volatile/\n".as_bytes());
             if let Err(e) = write(&gitignore_path, gitignore_bytes) {

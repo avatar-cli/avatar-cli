@@ -126,10 +126,10 @@ pub(crate) struct ImageBinaryConfigLock {
 impl ImageBinaryConfigLock {
     pub fn new(oci_image_name: String, oci_image_hash: String, path: PathBuf, run_config: Option<OCIContainerRunConfig>) -> ImageBinaryConfigLock {
         ImageBinaryConfigLock {
-            oci_image_name: oci_image_name,
-            oci_image_hash: oci_image_hash,
-            path: path,
-            run_config: run_config,
+            oci_image_name,
+            oci_image_hash,
+            path,
+            run_config,
         }
     }
 
@@ -195,10 +195,10 @@ impl ProjectConfigLock {
         binaries: HashMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {
-            project_config_hash: project_config_hash,
-            project_internal_id: project_internal_id,
-            images: images,
-            binaries: binaries,
+            project_config_hash,
+            project_internal_id,
+            images,
+            binaries,
         }
     }
 }
@@ -297,7 +297,7 @@ pub(crate) fn get_config(config_filepath: &PathBuf) -> (ProjectConfig, Digest) {
     )
 }
 
-pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) -> () {
+pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) {
     match serde_yaml::to_vec(config) {
         Ok(serialized_config) => {
             if let Err(e) = write(config_filepath, &serialized_config) {

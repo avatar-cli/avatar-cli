@@ -14,9 +14,9 @@ pub(crate) mod install;
 pub(crate) mod run;
 pub(crate) mod shell;
 
-pub(crate) const AVATAR_CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub(crate) const AVATAR_CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub(crate) fn select() -> () {
+pub(crate) fn select() {
     let matches = App::new("avatar")
         .version(AVATAR_CLI_VERSION)
         .setting(AppSettings::SubcommandRequired)

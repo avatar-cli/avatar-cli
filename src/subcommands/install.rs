@@ -116,7 +116,7 @@ fn check_project_settings(
                 changed_state = true;
                 update_project_state(
                     project_state_path,
-                    config_lock.clone(),
+                    config_lock,
                     config_lock_hash.as_ref(),
                 )
             } else {
@@ -127,16 +127,14 @@ fn check_project_settings(
             changed_state = true;
 
             let volatile_dir = project_state_path.parent().unwrap();
-            if !volatile_dir.exists() {
-                if let Err(_) = create_dir_all(volatile_dir) {
-                    eprintln!("Unable to create directory {}", volatile_dir.display());
-                    exit(exitcode::CANTCREAT)
-                }
+            if !volatile_dir.exists() && create_dir_all(volatile_dir).is_err() {
+                eprintln!("Unable to create directory {}", volatile_dir.display());
+                exit(exitcode::CANTCREAT)
             }
 
             update_project_state(
                 project_state_path,
-                config_lock.clone(),
+                config_lock,
                 config_lock_hash.as_ref(),
             )
         }
@@ -206,7 +204,7 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
     {
         Ok(output) => match output.status.success() {
             true => match from_utf8(&output.stdout) {
-                Ok(stdout) => match stdout.trim().split(":").nth(1) {
+                Ok(stdout) => match stdout.trim().split(':').nth(1) {
                     Some(hash) => (image_tag.clone(), hash.to_string()),
                     None => {
                         eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
@@ -308,7 +306,7 @@ fn get_binaries_settings(
 fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
     let images = project_state.get_images();
 
-    if let Err(_) = which::which("docker") {
+    if which::which("docker").is_err() {
         eprintln!("docker client is not available");
         exit(exitcode::UNAVAILABLE)
     }
@@ -344,7 +342,7 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
     changed_state
 }
 
-fn pull_oci_image_by_hash(image_ref: String) -> () {
+fn pull_oci_image_by_hash(image_ref: String) {
     // This code assumes that the existence of the docker command has been checked before
     if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
         eprintln!(
@@ -360,7 +358,7 @@ fn populate_volatile_bin_dir(
     project_path: &PathBuf,
     project_state: &ProjectConfigLock,
     changed_state: bool,
-) -> () {
+) {
     let bin_path = project_path
         .join(".avatar-cli")
         .join("volatile")
@@ -386,7 +384,7 @@ fn populate_volatile_bin_dir(
         }
     }
 
-    if let Err(_) = create_dir_all(&bin_path) {
+    if create_dir_all(&bin_path).is_err() {
         eprintln!("Unable to create directory {}", bin_path.display());
         exit(exitcode::CANTCREAT)
     }
@@ -414,7 +412,7 @@ fn populate_volatile_bin_dir(
     }
 
     for binary_name in project_state.get_binary_names() {
-        if let Err(_) = symlink(&managed_avatar_path, bin_path.join(binary_name)) {
+        if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
             eprintln!("Unable to create symlink to {} binary", binary_name);
             exit(exitcode::CANTCREAT)
         }

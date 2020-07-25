@@ -17,7 +17,7 @@ use crate::avatar_env::{
 };
 use crate::subcommands::install::install_subcommand;
 
-pub(crate) fn shell_subcommand() -> () {
+pub(crate) fn shell_subcommand() {
     let (project_path, config_path, config_lock_path, project_state_path, project_state) =
         install_subcommand();
 

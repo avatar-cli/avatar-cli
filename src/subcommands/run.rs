@@ -19,7 +19,7 @@ use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKE
 use crate::directories::{check_if_inside_project_dir, get_project_path};
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
 
-pub(crate) fn run_subcommand() -> () {
+pub(crate) fn run_subcommand() {
     let project_path = match get_project_path() {
         Some(p) => p,
         None => {
@@ -44,7 +44,7 @@ pub(crate) fn run_subcommand() -> () {
     run(&project_path, &used_program_name, &session_token, 4)
 }
 
-pub(crate) fn run_in_subshell_mode(used_program_name: &str) -> () {
+pub(crate) fn run_in_subshell_mode(used_program_name: &str) {
     let project_env = AvatarEnv::read();
     let project_path = project_env.get_project_path();
 
@@ -61,7 +61,7 @@ fn run(
     used_program_name: &str,
     session_token: &str,
     skip_args: usize,
-) -> () {
+) {
     let current_dir = match env::current_dir() {
         Ok(p) => p,
         Err(_) => {
@@ -96,7 +96,7 @@ fn run(
     let (_, config_hash) = get_config(&config_path);
     let (config_lock, config_lock_hash) = get_config_lock(&config_lock_path);
 
-    if &config_hash.as_ref() != &&config_lock.get_project_config_hash()[..] {
+    if config_hash.as_ref() != &config_lock.get_project_config_hash()[..] {
         eprintln!(
         "The hash for the file '{}' does not match with the one in '{}', considering exiting the avatar subshell and entering again",
         config_path.display(),
@@ -107,7 +107,7 @@ fn run(
 
     let (project_state, _) = get_config_lock(&project_state_path);
 
-    if &config_lock_hash.as_ref() != &&project_state.get_project_config_hash()[..] {
+    if config_lock_hash.as_ref() != &project_state.get_project_config_hash()[..] {
         eprintln!(
         "The hash for the file '{}' does not match with the one in '{}', considering exiting the avatar subshell and entering again",
         config_lock_path.display(),
@@ -145,8 +145,8 @@ fn run_docker_command(
     project_internal_id: &str,
     session_token: &str,
     skip_args: usize,
-) -> () {
-    if let Err(_) = which::which("docker") {
+) {
+    if which::which("docker").is_err() {
         eprintln!("docker client is not available");
         exit(exitcode::UNAVAILABLE)
     }

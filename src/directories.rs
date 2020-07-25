@@ -27,7 +27,7 @@ pub(crate) fn get_project_path() -> Option<PathBuf> {
     None
 }
 
-pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) -> () {
+pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) {
     let mut in_project_dir = false;
     for ancestor in current_dir.ancestors() {
         if ancestor == project_path {
