@@ -56,12 +56,7 @@ pub(crate) fn run_in_subshell_mode(used_program_name: &str) {
     );
 }
 
-fn run(
-    project_path: &PathBuf,
-    used_program_name: &str,
-    session_token: &str,
-    skip_args: usize,
-) {
+fn run(project_path: &PathBuf, used_program_name: &str, session_token: &str, skip_args: usize) {
     let current_dir = match env::current_dir() {
         Ok(p) => p,
         Err(_) => {
@@ -198,7 +193,12 @@ fn run_docker_command(
         Some(pn) => pn,
         None => "xxx",
     };
-    let program_name = match binary_configuration.get_path().file_name().unwrap().to_str() {
+    let program_name = match binary_configuration
+        .get_path()
+        .file_name()
+        .unwrap()
+        .to_str()
+    {
         Some(pn) => pn,
         None => "yyy",
     };

@@ -20,8 +20,9 @@ use crate::{
     avatar_env::SESSION_TOKEN,
     directories::get_project_path,
     project_config::{
-        get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock, OCIImageConfig,
-        ProjectConfig, ProjectConfigLock,
+        get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock,
+        OCIContainerRunConfig, OCIImageConfig, OCIImageConfigLock, ProjectConfig,
+        ProjectConfigLock,
     },
 };
 
@@ -114,11 +115,7 @@ fn check_project_settings(
 
             if config_lock_hash.as_ref() != &_project_state.get_project_config_hash()[..] {
                 changed_state = true;
-                update_project_state(
-                    project_state_path,
-                    config_lock,
-                    config_lock_hash.as_ref(),
-                )
+                update_project_state(project_state_path, config_lock, config_lock_hash.as_ref())
             } else {
                 _project_state
             }
@@ -132,11 +129,7 @@ fn check_project_settings(
                 exit(exitcode::CANTCREAT)
             }
 
-            update_project_state(
-                project_state_path,
-                config_lock,
-                config_lock_hash.as_ref(),
-            )
+            update_project_state(project_state_path, config_lock, config_lock_hash.as_ref())
         }
     };
 
@@ -148,13 +141,13 @@ fn generate_config_lock(
     config: &ProjectConfig,
     config_hash: &Digest,
 ) -> (ProjectConfigLock, Digest) {
-    let image_hashes = get_image_hashes(config);
-    let binaries_settings = get_binaries_settings(config, &image_hashes);
+    let image_configs = get_image_hashes(config);
+    let binaries_settings = get_binaries_settings(config, &image_configs);
 
     let config_lock = ProjectConfigLock::new(
         Vec::<u8>::from(config_hash.as_ref()),
         config.get_project_internal_id().clone(),
-        image_hashes,
+        image_configs,
         binaries_settings,
     );
 
@@ -172,7 +165,9 @@ fn update_project_state(
     project_state
 }
 
-fn get_image_hashes(config: &ProjectConfig) -> HashMap<String, HashMap<String, String>> {
+fn get_image_hashes(
+    config: &ProjectConfig,
+) -> HashMap<String, HashMap<String, OCIImageConfigLock>> {
     match config.get_images() {
         Some(images) => images.iter().map(replace_configs_by_hashes).collect(),
         None => HashMap::new(),
@@ -181,7 +176,7 @@ fn get_image_hashes(config: &ProjectConfig) -> HashMap<String, HashMap<String, S
 
 fn replace_configs_by_hashes(
     (image_name, image_tags): (&String, &HashMap<String, OCIImageConfig>),
-) -> (String, HashMap<String, String>) {
+) -> (String, HashMap<String, OCIImageConfigLock>) {
     if image_tags.is_empty() {
         eprintln!("No tags are defined for image {}", image_name);
         exit(exitcode::DATAERR)
@@ -191,13 +186,21 @@ fn replace_configs_by_hashes(
         image_name.clone(),
         image_tags
             .iter()
-            .map(|(image_tag, _)| (image_tag, format!("{}:{}", image_name, image_tag)))
+            .map(|(image_tag, image_config)| {
+                (
+                    image_tag,
+                    format!("{}:{}", image_name, image_tag),
+                    image_config.get_run_config().clone(),
+                )
+            })
             .map(get_image_hash_by_tag)
             .collect(),
     )
 }
 
-fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, String) {
+fn get_image_hash_by_tag(
+    (image_tag, image_fqn, run_config): (&String, String, Option<OCIContainerRunConfig>),
+) -> (String, OCIImageConfigLock) {
     match Command::new("docker")
         .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
         .output()
@@ -205,7 +208,10 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
         Ok(output) => match output.status.success() {
             true => match from_utf8(&output.stdout) {
                 Ok(stdout) => match stdout.trim().split(':').nth(1) {
-                    Some(hash) => (image_tag.clone(), hash.to_string()),
+                    Some(hash) => (
+                        image_tag.clone(),
+                        OCIImageConfigLock::new(hash.to_string(), run_config),
+                    ),
                     None => {
                         eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
                         exit(exitcode::PROTOCOL)
@@ -221,7 +227,7 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
                 .status()
             {
                 Ok(status) => match status.success() {
-                    true => get_image_hash_by_tag((image_tag, image_fqn)),
+                    true => get_image_hash_by_tag((image_tag, image_fqn, run_config)),
                     false => {
                         eprintln!("Unable to pull OCI image {}", image_fqn);
                         exit(exitcode::UNAVAILABLE)
@@ -250,7 +256,7 @@ fn get_image_hash_by_tag((image_tag, image_fqn): (&String, String)) -> (String, 
 
 fn get_binaries_settings(
     config: &ProjectConfig,
-    images_name_tag_hash_rel: &HashMap<String, HashMap<String, String>>,
+    images_name_tag_hash_rel: &HashMap<String, HashMap<String, OCIImageConfigLock>>,
 ) -> HashMap<String, ImageBinaryConfigLock> {
     let mut dst_binaries: HashMap<String, ImageBinaryConfigLock> = HashMap::new();
 
@@ -260,10 +266,10 @@ fn get_binaries_settings(
                 match image_config.get_binaries() {
                     Some(src_binaries) => {
                         for (binary_name, binary_config) in src_binaries {
-                            let image_hash = match images_name_tag_hash_rel.get(image_name) {
-                                Some(images_tag_hash_rel) => {
-                                    match images_tag_hash_rel.get(image_tag) {
-                                        Some(_image_hash) => _image_hash,
+                            let image_config = match images_name_tag_hash_rel.get(image_name) {
+                                Some(images_tag_config_rel) => {
+                                    match images_tag_config_rel.get(image_tag) {
+                                        Some(_image_config) => _image_config,
                                         None => {
                                             eprintln!(
                                                 "A theoretically impossible error just happened."
@@ -287,9 +293,9 @@ fn get_binaries_settings(
                                 binary_name.clone(),
                                 ImageBinaryConfigLock::new(
                                     image_name.clone(),
-                                    image_hash.clone(),
+                                    image_config.get_hash().clone(),
                                     binary_config.get_path().clone(),
-                                    binary_config.get_run_config().clone()
+                                    binary_config.get_run_config().clone(),
                                 ),
                             );
                         }
@@ -314,15 +320,22 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
     let mut changed_state = false;
 
     for (image_name, image_tags) in images.iter() {
-        for (_, image_hash) in image_tags.iter() {
+        for (_, image_config) in image_tags.iter() {
             let inspect_output = Command::new("docker")
-                .args(&["inspect", &format!("{}@sha256:{}", image_name, image_hash)])
+                .args(&[
+                    "inspect",
+                    &format!("{}@sha256:{}", image_name, image_config.get_hash()),
+                ])
                 .output();
 
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        pull_oci_image_by_hash(format!("{}@sha256:{}", image_name, image_hash));
+                        pull_oci_image_by_hash(format!(
+                            "{}@sha256:{}",
+                            image_name,
+                            image_config.get_hash()
+                        ));
                         changed_state = true;
                     }
                 }
@@ -330,7 +343,7 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
                     eprintln!(
                         "Unable to use docker to inspect image {}@sha256:{}.\n\n{}\n",
                         image_name,
-                        image_hash,
+                        image_config.get_hash(),
                         err.to_string()
                     );
                     exit(exitcode::OSERR)

@@ -4,7 +4,7 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fs::{read, write};
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -68,13 +68,19 @@ impl ImageBinaryConfig {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct OCIImageConfig {
     binaries: Option<HashMap<String, ImageBinaryConfig>>,
+    run_config: Option<OCIContainerRunConfig>,
 }
 
 impl OCIImageConfig {
     pub fn get_binaries(&self) -> &Option<HashMap<String, ImageBinaryConfig>> {
         &self.binaries
+    }
+
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+        &self.run_config
     }
 }
 
@@ -108,12 +114,6 @@ impl ProjectConfig {
 
 // -----------------------------------------------------------------------------
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct OCIImageConfigLock {
-    name: String,
-    hash: String,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfigLock {
@@ -124,7 +124,12 @@ pub(crate) struct ImageBinaryConfigLock {
 }
 
 impl ImageBinaryConfigLock {
-    pub fn new(oci_image_name: String, oci_image_hash: String, path: PathBuf, run_config: Option<OCIContainerRunConfig>) -> ImageBinaryConfigLock {
+    pub fn new(
+        oci_image_name: String,
+        oci_image_hash: String,
+        path: PathBuf,
+        run_config: Option<OCIContainerRunConfig>,
+    ) -> ImageBinaryConfigLock {
         ImageBinaryConfigLock {
             oci_image_name,
             oci_image_hash,
@@ -152,11 +157,28 @@ impl ImageBinaryConfigLock {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct OCIImageConfigLock {
+    hash: String,
+    run_config: Option<OCIContainerRunConfig>,
+}
+
+impl OCIImageConfigLock {
+    pub fn new(hash: String, run_config: Option<OCIContainerRunConfig>) -> OCIImageConfigLock {
+        OCIImageConfigLock { hash, run_config }
+    }
+
+    pub fn get_hash(&self) -> &String {
+        &self.hash
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     project_config_hash: Vec<u8>,
     project_internal_id: String,
-    images: HashMap<String, HashMap<String, String>>, // image_name -> image_tag -> image_hash
+    images: HashMap<String, HashMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image_hash
     binaries: HashMap<String, ImageBinaryConfigLock>,
 }
 
@@ -174,7 +196,7 @@ impl ProjectConfigLock {
         &self.project_internal_id
     }
 
-    pub fn get_images(&self) -> &HashMap<String, HashMap<String, String>> {
+    pub fn get_images(&self) -> &HashMap<String, HashMap<String, OCIImageConfigLock>> {
         &self.images
     }
 
@@ -191,7 +213,7 @@ impl ProjectConfigLock {
     pub fn new(
         project_config_hash: Vec<u8>,
         project_internal_id: String,
-        images: HashMap<String, HashMap<String, String>>,
+        images: HashMap<String, HashMap<String, OCIImageConfigLock>>,
         binaries: HashMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {

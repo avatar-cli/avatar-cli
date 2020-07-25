@@ -7,9 +7,20 @@ images:
       binaries:
         node:
           path: node
+          runConfig:
+            env:
+              THEANSWERTOEVERYTHING: 42
+            envFromHost:
+              - NPM_TOKEN
         npm:
           path: npm
         npx:
           path: npx
         yarn:
           path: yarn
+      runConfig:
+        env:
+          A_GLOBAL_VAR: hello
+          THEANSWERTOEVERYTHING: 55
+        envFromHost:
+          - NPM_TOKEN
