@@ -2,6 +2,7 @@
 stages:
   - boilerplate_checks
   - test
+  - publish
 
 boilerplate_checks:
   stage: boilerplate_checks
@@ -23,6 +24,18 @@ test:
       - main
   script:
     - cargo clippy
+
+crates_publish:
+  stage: publish
+  image: 'rust:1.45-stretch'
+  only:
+    refs:
+      - main
+  variables:
+    CARGO_TOKEN: $CARGO_TOKEN
+  script:
+    - cargo login ${CARGO_TOKEN}
+    - cargo publish
 
 include:
   # See https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
