@@ -1,5 +1,5 @@
 ---
-projectConfigHash: 6f0cd9d68bd955ca24c0da1018e38267bfa77da786752a8f5edb14e19590720d
+projectConfigHash: 3b17d8b62732c05021008bda1c07cc275f55d6c07ce7b573bc0162bb85b1df37
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
@@ -14,28 +14,50 @@ images:
         volumes: ~
         bindings: ~
 binaries:
-  npx:
-    ociImageName: node
-    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: npx
-    runConfig: ~
-  npm:
-    ociImageName: node
-    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: npm
-    runConfig: ~
-  yarn:
-    ociImageName: node
-    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: yarn
-    runConfig: ~
   node:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
     path: node
     runConfig:
       env:
+        A_GLOBAL_VAR: hello
         THEANSWERTOEVERYTHING: "42"
+      envFromHost:
+        - NPM_TOKEN
+      volumes: ~
+      bindings: ~
+  npx:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: npx
+    runConfig:
+      env:
+        A_GLOBAL_VAR: hello
+        THEANSWERTOEVERYTHING: "55"
+      envFromHost:
+        - NPM_TOKEN
+      volumes: ~
+      bindings: ~
+  yarn:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: yarn
+    runConfig:
+      env:
+        A_GLOBAL_VAR: hello
+        THEANSWERTOEVERYTHING: "55"
+      envFromHost:
+        - NPM_TOKEN
+      volumes: ~
+      bindings: ~
+  npm:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: npm
+    runConfig:
+      env:
+        A_GLOBAL_VAR: hello
+        THEANSWERTOEVERYTHING: "55"
       envFromHost:
         - NPM_TOKEN
       volumes: ~

@@ -20,7 +20,7 @@ use crate::{
     avatar_env::SESSION_TOKEN,
     directories::get_project_path,
     project_config::{
-        get_config, get_config_lock, save_config_lock, ImageBinaryConfigLock,
+        get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
         OCIContainerRunConfig, OCIImageConfig, OCIImageConfigLock, ProjectConfig,
         ProjectConfigLock,
     },
@@ -141,7 +141,7 @@ fn generate_config_lock(
     config: &ProjectConfig,
     config_hash: &Digest,
 ) -> (ProjectConfigLock, Digest) {
-    let image_configs = get_image_hashes(config);
+    let image_configs = get_image_compiled_configs(config);
     let binaries_settings = get_binaries_settings(config, &image_configs);
 
     let config_lock = ProjectConfigLock::new(
@@ -165,16 +165,16 @@ fn update_project_state(
     project_state
 }
 
-fn get_image_hashes(
+fn get_image_compiled_configs(
     config: &ProjectConfig,
 ) -> HashMap<String, HashMap<String, OCIImageConfigLock>> {
     match config.get_images() {
-        Some(images) => images.iter().map(replace_configs_by_hashes).collect(),
+        Some(images) => images.iter().map(compile_image_configs).collect(),
         None => HashMap::new(),
     }
 }
 
-fn replace_configs_by_hashes(
+fn compile_image_configs(
     (image_name, image_tags): (&String, &HashMap<String, OCIImageConfig>),
 ) -> (String, HashMap<String, OCIImageConfigLock>) {
     if image_tags.is_empty() {
@@ -193,12 +193,12 @@ fn replace_configs_by_hashes(
                     image_config.get_run_config().clone(),
                 )
             })
-            .map(get_image_hash_by_tag)
+            .map(get_image_config_by_tag)
             .collect(),
     )
 }
 
-fn get_image_hash_by_tag(
+fn get_image_config_by_tag(
     (image_tag, image_fqn, run_config): (&String, String, Option<OCIContainerRunConfig>),
 ) -> (String, OCIImageConfigLock) {
     match Command::new("docker")
@@ -227,7 +227,7 @@ fn get_image_hash_by_tag(
                 .status()
             {
                 Ok(status) => match status.success() {
-                    true => get_image_hash_by_tag((image_tag, image_fqn, run_config)),
+                    true => get_image_config_by_tag((image_tag, image_fqn, run_config)),
                     false => {
                         eprintln!("Unable to pull OCI image {}", image_fqn);
                         exit(exitcode::UNAVAILABLE)
@@ -295,7 +295,10 @@ fn get_binaries_settings(
                                     image_name.clone(),
                                     image_config.get_hash().clone(),
                                     binary_config.get_path().clone(),
-                                    binary_config.get_run_config().clone(),
+                                    merge_run_configs(
+                                        image_config.get_run_config(),
+                                        binary_config.get_run_config(),
+                                    ),
                                 ),
                             );
                         }
@@ -331,7 +334,7 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        pull_oci_image_by_hash(format!(
+                        pull_oci_image_by_fqn(format!(
                             "{}@sha256:{}",
                             image_name,
                             image_config.get_hash()
@@ -355,7 +358,7 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
     changed_state
 }
 
-fn pull_oci_image_by_hash(image_ref: String) {
+fn pull_oci_image_by_fqn(image_ref: String) {
     // This code assumes that the existence of the docker command has been checked before
     if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
         eprintln!(

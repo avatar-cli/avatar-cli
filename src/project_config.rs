@@ -48,6 +48,14 @@ impl OCIContainerRunConfig {
     pub fn get_env_from_host(&self) -> &Option<HashSet<String>> {
         &self.env_from_host
     }
+
+    pub fn get_volumes(&self) -> &Option<Vec<VolumeConfig>> {
+        &self.volumes
+    }
+
+    pub fn get_bindings(&self) -> &Option<Vec<BindingConfig>> {
+        &self.bindings
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -169,6 +177,10 @@ impl OCIImageConfigLock {
 
     pub fn get_hash(&self) -> &String {
         &self.hash
+    }
+
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+        &self.run_config
     }
 }
 
@@ -361,5 +373,80 @@ pub(crate) fn save_config_lock(
             );
             exit(exitcode::SOFTWARE)
         }
+    }
+}
+
+pub(crate) fn merge_run_configs(
+    base_config: &Option<OCIContainerRunConfig>,
+    new_config: &Option<OCIContainerRunConfig>,
+) -> Option<OCIContainerRunConfig> {
+    match base_config {
+        Some(_base_config) => match new_config {
+            Some(_new_config) => Some(OCIContainerRunConfig {
+                bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
+                volumes: merge_volumes(_base_config.get_volumes(), _new_config.get_volumes()),
+                env: merge_envs(_base_config.get_env(), _new_config.get_env()),
+                env_from_host: merge_envs_from_host(
+                    _base_config.get_env_from_host(),
+                    _new_config.get_env_from_host(),
+                ),
+            }),
+            None => base_config.clone(),
+        },
+        None => new_config.clone(),
+    }
+}
+
+fn merge_bindings(
+    base_bindings: &Option<Vec<BindingConfig>>,
+    new_bindings: &Option<Vec<BindingConfig>>,
+) -> Option<Vec<BindingConfig>> {
+    // TODO: Improve merge strategy
+    match new_bindings {
+        Some(_) => new_bindings.clone(),
+        None => base_bindings.clone(),
+    }
+}
+
+fn merge_volumes(
+    base_volumes: &Option<Vec<VolumeConfig>>,
+    new_volumes: &Option<Vec<VolumeConfig>>,
+) -> Option<Vec<VolumeConfig>> {
+    // TODO: Improve merge strategy
+    match new_volumes {
+        Some(_) => new_volumes.clone(),
+        None => base_volumes.clone(),
+    }
+}
+
+fn merge_envs(
+    base_env: &Option<HashMap<String, String>>,
+    new_env: &Option<HashMap<String, String>>,
+) -> Option<HashMap<String, String>> {
+    match base_env {
+        Some(_base_env) => match new_env {
+            Some(_new_env) => {
+                let mut merged_env = _base_env.clone();
+                for (var_name, var_value) in _new_env {
+                    merged_env.insert(var_name.clone(), var_value.clone());
+                }
+                Some(merged_env)
+            }
+            None => base_env.clone(),
+        },
+        None => new_env.clone(),
+    }
+}
+
+fn merge_envs_from_host(
+    base_env: &Option<HashSet<String>>,
+    new_env: &Option<HashSet<String>>,
+) -> Option<HashSet<String>> {
+    match base_env {
+        Some(_base_env) => match new_env {
+            Some(_new_env) => Some(_base_env.union(_new_env).cloned().collect()),
+            None => base_env.clone(),
+        },
+        None => new_env.clone(),
     }
 }

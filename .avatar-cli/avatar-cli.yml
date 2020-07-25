@@ -4,6 +4,14 @@ projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
     14-buster:
+
+      runConfig:
+        env:
+          A_GLOBAL_VAR: hello
+          THEANSWERTOEVERYTHING: 55
+        envFromHost:
+          - NPM_TOKEN
+
       binaries:
         node:
           path: node
@@ -18,9 +26,3 @@ images:
           path: npx
         yarn:
           path: yarn
-      runConfig:
-        env:
-          A_GLOBAL_VAR: hello
-          THEANSWERTOEVERYTHING: 55
-        envFromHost:
-          - NPM_TOKEN
