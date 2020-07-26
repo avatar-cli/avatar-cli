@@ -20,6 +20,8 @@ images:
               THEANSWERTOEVERYTHING: 42
             envFromHost:
               - NPM_TOKEN
+            volumes:
+              - containerPath: /caches
         npm:
           path: npm
         npx:

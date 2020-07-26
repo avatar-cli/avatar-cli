@@ -298,6 +298,9 @@ fn get_binaries_settings(
                                     merge_run_configs(
                                         image_config.get_run_config(),
                                         binary_config.get_run_config(),
+                                        config.get_project_internal_id(),
+                                        &format!("{}-{}", image_name, image_tag),
+                                        binary_name,
                                     ),
                                 ),
                             );

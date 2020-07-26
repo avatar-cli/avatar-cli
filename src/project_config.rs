@@ -420,12 +420,21 @@ pub(crate) fn save_config_lock(
 pub(crate) fn merge_run_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
+    project_internal_id: &String,
+    image_ref: &String,
+    binary_name: &String,
 ) -> Option<OCIContainerRunConfigLock> {
     match base_config {
         Some(_base_config) => match new_config {
             Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
-                volumes: merge_volumes(_base_config.get_volumes(), _new_config.get_volumes()),
+                volumes: merge_volumes(
+                    _base_config.get_volumes(),
+                    _new_config.get_volumes(),
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
                 env: merge_envs(_base_config.get_env(), _new_config.get_env()),
                 env_from_host: merge_envs_from_host(
                     _base_config.get_env_from_host(),
@@ -434,7 +443,12 @@ pub(crate) fn merge_run_configs(
             }),
             None => Some(OCIContainerRunConfigLock {
                 bindings: _base_config.bindings.clone(),
-                volumes: generate_volume_config_lock(&_base_config.volumes),
+                volumes: generate_volume_config_lock(
+                    &_base_config.volumes,
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
                 env: _base_config.env.clone(),
                 env_from_host: _base_config.env_from_host.clone(),
             }),
@@ -442,7 +456,12 @@ pub(crate) fn merge_run_configs(
         None => match new_config {
             Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: _new_config.bindings.clone(),
-                volumes: generate_volume_config_lock(&_new_config.volumes),
+                volumes: generate_volume_config_lock(
+                    &_new_config.volumes,
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
                 env: _new_config.env.clone(),
                 env_from_host: _new_config.env_from_host.clone(),
             }),
@@ -465,16 +484,26 @@ fn merge_bindings(
 fn merge_volumes(
     base_volumes: &Option<Vec<VolumeConfig>>,
     new_volumes: &Option<Vec<VolumeConfig>>,
+    project_internal_id: &String,
+    image_ref: &String,
+    binary_name: &String,
 ) -> Option<Vec<VolumeConfigLock>> {
     // TODO: Improve merge strategy
     match new_volumes {
-        Some(_) => generate_volume_config_lock(new_volumes),
-        None => generate_volume_config_lock(base_volumes),
+        Some(_) => {
+            generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name)
+        }
+        None => {
+            generate_volume_config_lock(base_volumes, project_internal_id, image_ref, binary_name)
+        }
     }
 }
 
 fn generate_volume_config_lock(
     image_volume_configs: &Option<Vec<VolumeConfig>>,
+    project_internal_id: &String,
+    image_ref: &String,
+    binary_name: &String,
 ) -> Option<Vec<VolumeConfigLock>> {
     match image_volume_configs {
         Some(_src_volume_config) => Some(
@@ -482,11 +511,39 @@ fn generate_volume_config_lock(
                 .iter()
                 .map(|volume_config| VolumeConfigLock {
                     container_path: volume_config.container_path.clone(),
-                    volume_name: "".to_string(),
+                    volume_name: generate_volume_name(
+                        project_internal_id,
+                        image_ref,
+                        binary_name,
+                        volume_config,
+                    ),
                 })
                 .collect(),
         ),
         None => Option::<Vec<VolumeConfigLock>>::None,
+    }
+}
+
+fn generate_volume_name(
+    project_internal_id: &String,
+    image_ref: &String,
+    binary_name: &String,
+    volume_config: &VolumeConfig,
+) -> String {
+    let container_path_bytes = match volume_config.container_path.to_str() {
+        Some(cp) => cp.as_bytes(),
+        None => {
+            eprintln!("The volume container path {} can't be properly converted to utf8 string", volume_config.container_path.to_string_lossy());
+            exit(exitcode::USAGE)
+        }
+    };
+    let path_hash = digest(&SHA256, &container_path_bytes);
+    let path_hash = hex::encode(&path_hash.as_ref()[0..16]);
+
+    match volume_config.scope {
+        VolumeScope::Project => format!("prj_{}_{}", project_internal_id, path_hash),
+        VolumeScope::OCIImage => format!("img_{}_{}_{}", project_internal_id, image_ref, path_hash),
+        VolumeScope::Binary => format!("bin_{}_{}_{}_{}", project_internal_id, image_ref, binary_name, path_hash),
     }
 }
 
