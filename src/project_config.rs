@@ -124,10 +124,16 @@ impl ProjectConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct VolumeConfigLock {
+    container_path: PathBuf,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct OCIContainerRunConfigLock {
     env: Option<HashMap<String, String>>,
     env_from_host: Option<HashSet<String>>,
-    volumes: Option<Vec<VolumeConfig>>,
+    volumes: Option<Vec<VolumeConfigLock>>,
     bindings: Option<Vec<BindingConfig>>,
 }
 
@@ -412,19 +418,19 @@ pub(crate) fn merge_run_configs(
             }),
             None => Some(OCIContainerRunConfigLock {
                 bindings: _base_config.bindings.clone(),
-                volumes: _base_config.volumes.clone(),
+                volumes: generate_volume_config_lock(&_base_config.volumes),
                 env: _base_config.env.clone(),
-                env_from_host: _base_config.env_from_host.clone()
-            })
+                env_from_host: _base_config.env_from_host.clone(),
+            }),
         },
         None => match new_config {
             Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: _new_config.bindings.clone(),
-                volumes: _new_config.volumes.clone(),
+                volumes: generate_volume_config_lock(&_new_config.volumes),
                 env: _new_config.env.clone(),
-                env_from_host: _new_config.env_from_host.clone()
+                env_from_host: _new_config.env_from_host.clone(),
             }),
-            None => Option::<OCIContainerRunConfigLock>::None
+            None => Option::<OCIContainerRunConfigLock>::None,
         },
     }
 }
@@ -443,11 +449,25 @@ fn merge_bindings(
 fn merge_volumes(
     base_volumes: &Option<Vec<VolumeConfig>>,
     new_volumes: &Option<Vec<VolumeConfig>>,
-) -> Option<Vec<VolumeConfig>> {
+) -> Option<Vec<VolumeConfigLock>> {
     // TODO: Improve merge strategy
     match new_volumes {
-        Some(_) => new_volumes.clone(),
-        None => base_volumes.clone(),
+        Some(_) => generate_volume_config_lock(new_volumes),
+        None => generate_volume_config_lock(base_volumes),
+    }
+}
+
+fn generate_volume_config_lock(image_volume_configs: &Option<Vec<VolumeConfig>>) -> Option<Vec<VolumeConfigLock>> {
+    match image_volume_configs {
+        Some(_src_volume_config) => Some(
+            _src_volume_config
+                .iter()
+                .map(|volume_config| VolumeConfigLock {
+                    container_path: volume_config.container_path.clone(),
+                })
+                .collect(),
+        ),
+        None => Option::<Vec<VolumeConfigLock>>::None,
     }
 }
 
