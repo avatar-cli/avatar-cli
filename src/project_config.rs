@@ -19,9 +19,24 @@ use serde::{Deserialize, Serialize};
 use crate::subcommands::AVATAR_CLI_VERSION;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum VolumeScope {
+    Project,
+    OCIImage,
+    Binary,
+}
+
+impl VolumeScope {
+    fn default() -> Self {
+        VolumeScope::Project
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct VolumeConfig {
     container_path: PathBuf,
+    #[serde(default = "VolumeScope::default")]
+    scope: VolumeScope,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -126,6 +141,7 @@ impl ProjectConfig {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct VolumeConfigLock {
     container_path: PathBuf,
+    volume_name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -457,13 +473,16 @@ fn merge_volumes(
     }
 }
 
-fn generate_volume_config_lock(image_volume_configs: &Option<Vec<VolumeConfig>>) -> Option<Vec<VolumeConfigLock>> {
+fn generate_volume_config_lock(
+    image_volume_configs: &Option<Vec<VolumeConfig>>,
+) -> Option<Vec<VolumeConfigLock>> {
     match image_volume_configs {
         Some(_src_volume_config) => Some(
             _src_volume_config
                 .iter()
                 .map(|volume_config| VolumeConfigLock {
                     container_path: volume_config.container_path.clone(),
+                    volume_name: "".to_string(),
                 })
                 .collect(),
         ),
