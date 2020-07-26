@@ -124,11 +124,30 @@ impl ProjectConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct OCIContainerRunConfigLock {
+    env: Option<HashMap<String, String>>,
+    env_from_host: Option<HashSet<String>>,
+    volumes: Option<Vec<VolumeConfig>>,
+    bindings: Option<Vec<BindingConfig>>,
+}
+
+impl OCIContainerRunConfigLock {
+    pub fn get_env(&self) -> &Option<HashMap<String, String>> {
+        &self.env
+    }
+
+    pub fn get_env_from_host(&self) -> &Option<HashSet<String>> {
+        &self.env_from_host
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfigLock {
     oci_image_name: String,
     oci_image_hash: String,
     path: PathBuf,
-    run_config: Option<OCIContainerRunConfig>,
+    run_config: Option<OCIContainerRunConfigLock>,
 }
 
 impl ImageBinaryConfigLock {
@@ -136,7 +155,7 @@ impl ImageBinaryConfigLock {
         oci_image_name: String,
         oci_image_hash: String,
         path: PathBuf,
-        run_config: Option<OCIContainerRunConfig>,
+        run_config: Option<OCIContainerRunConfigLock>,
     ) -> ImageBinaryConfigLock {
         ImageBinaryConfigLock {
             oci_image_name,
@@ -158,7 +177,7 @@ impl ImageBinaryConfigLock {
         &self.path
     }
 
-    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfigLock> {
         &self.run_config
     }
 }
@@ -379,10 +398,10 @@ pub(crate) fn save_config_lock(
 pub(crate) fn merge_run_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
-) -> Option<OCIContainerRunConfig> {
+) -> Option<OCIContainerRunConfigLock> {
     match base_config {
         Some(_base_config) => match new_config {
-            Some(_new_config) => Some(OCIContainerRunConfig {
+            Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
                 volumes: merge_volumes(_base_config.get_volumes(), _new_config.get_volumes()),
                 env: merge_envs(_base_config.get_env(), _new_config.get_env()),
@@ -391,9 +410,22 @@ pub(crate) fn merge_run_configs(
                     _new_config.get_env_from_host(),
                 ),
             }),
-            None => base_config.clone(),
+            None => Some(OCIContainerRunConfigLock {
+                bindings: _base_config.bindings.clone(),
+                volumes: _base_config.volumes.clone(),
+                env: _base_config.env.clone(),
+                env_from_host: _base_config.env_from_host.clone()
+            })
         },
-        None => new_config.clone(),
+        None => match new_config {
+            Some(_new_config) => Some(OCIContainerRunConfigLock {
+                bindings: _new_config.bindings.clone(),
+                volumes: _new_config.volumes.clone(),
+                env: _new_config.env.clone(),
+                env_from_host: _new_config.env_from_host.clone()
+            }),
+            None => Option::<OCIContainerRunConfigLock>::None
+        },
     }
 }
 
