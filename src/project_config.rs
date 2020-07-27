@@ -145,6 +145,10 @@ pub(crate) struct VolumeConfigLock {
 }
 
 impl VolumeConfigLock {
+    pub fn get_container_path(&self) -> &PathBuf {
+        &self.container_path
+    }
+
     pub fn get_name(&self) -> &String {
         &self.volume_name
     }

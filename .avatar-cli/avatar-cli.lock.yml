@@ -1,5 +1,5 @@
 ---
-projectConfigHash: 8f5fb1d9aafc93f6672f3d0e06ccbfee158f3d0d70270f9c059e3d8d132c9205
+projectConfigHash: 22d20cb850b396346f0653867f3eaabe906a3ce97a47a24433590e5a3ba97691
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
@@ -14,6 +14,20 @@ images:
         volumes: ~
         bindings: ~
 binaries:
+  customsh:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: sh
+    runConfig:
+      env:
+        A_GLOBAL_VAR: hello
+        THEANSWERTOEVERYTHING: "55"
+      envFromHost:
+        - NPM_TOKEN
+      volumes:
+        - containerPath: /pathespecial
+          volumeName: prj_v2ZmtbkGuVdvGwVE_eac5edf37dba57b623ea02dd3a7aeb86
+      bindings: ~
   node:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
