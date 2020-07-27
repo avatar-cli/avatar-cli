@@ -4,7 +4,7 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{read, write};
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -49,22 +49,22 @@ pub(crate) struct BindingConfig {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OCIContainerRunConfig {
-    env: Option<HashMap<String, String>>,
-    env_from_host: Option<HashSet<String>>,
-    volumes: Option<HashMap<PathBuf, VolumeConfig>>,
+    env: Option<BTreeMap<String, String>>,
+    env_from_host: Option<BTreeSet<String>>,
+    volumes: Option<BTreeMap<PathBuf, VolumeConfig>>,
     bindings: Option<Vec<BindingConfig>>,
 }
 
 impl OCIContainerRunConfig {
-    pub fn get_env(&self) -> &Option<HashMap<String, String>> {
+    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
         &self.env
     }
 
-    pub fn get_env_from_host(&self) -> &Option<HashSet<String>> {
+    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
         &self.env_from_host
     }
 
-    pub fn get_volumes(&self) -> &Option<HashMap<PathBuf, VolumeConfig>> {
+    pub fn get_volumes(&self) -> &Option<BTreeMap<PathBuf, VolumeConfig>> {
         &self.volumes
     }
 
@@ -93,12 +93,12 @@ impl ImageBinaryConfig {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OCIImageConfig {
-    binaries: Option<HashMap<String, ImageBinaryConfig>>,
+    binaries: Option<BTreeMap<String, ImageBinaryConfig>>,
     run_config: Option<OCIContainerRunConfig>,
 }
 
 impl OCIImageConfig {
-    pub fn get_binaries(&self) -> &Option<HashMap<String, ImageBinaryConfig>> {
+    pub fn get_binaries(&self) -> &Option<BTreeMap<String, ImageBinaryConfig>> {
         &self.binaries
     }
 
@@ -112,7 +112,7 @@ impl OCIImageConfig {
 pub(crate) struct ProjectConfig {
     version: String,
     project_internal_id: String,
-    images: Option<HashMap<String, HashMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
+    images: Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
 }
 
 impl ProjectConfig {
@@ -130,7 +130,7 @@ impl ProjectConfig {
         &self.project_internal_id
     }
 
-    pub fn get_images(&self) -> &Option<HashMap<String, HashMap<String, OCIImageConfig>>> {
+    pub fn get_images(&self) -> &Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>> {
         &self.images
     }
 }
@@ -147,18 +147,18 @@ pub(crate) struct VolumeConfigLock {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OCIContainerRunConfigLock {
-    env: Option<HashMap<String, String>>,
-    env_from_host: Option<HashSet<String>>,
+    env: Option<BTreeMap<String, String>>,
+    env_from_host: Option<BTreeSet<String>>,
     volumes: Option<Vec<VolumeConfigLock>>,
     bindings: Option<Vec<BindingConfig>>,
 }
 
 impl OCIContainerRunConfigLock {
-    pub fn get_env(&self) -> &Option<HashMap<String, String>> {
+    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
         &self.env
     }
 
-    pub fn get_env_from_host(&self) -> &Option<HashSet<String>> {
+    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
         &self.env_from_host
     }
 }
@@ -231,8 +231,8 @@ pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     project_config_hash: Vec<u8>,
     project_internal_id: String,
-    images: HashMap<String, HashMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image_hash
-    binaries: HashMap<String, ImageBinaryConfigLock>,
+    images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image_hash
+    binaries: BTreeMap<String, ImageBinaryConfigLock>,
 }
 
 impl ProjectConfigLock {
@@ -249,7 +249,7 @@ impl ProjectConfigLock {
         &self.project_internal_id
     }
 
-    pub fn get_images(&self) -> &HashMap<String, HashMap<String, OCIImageConfigLock>> {
+    pub fn get_images(&self) -> &BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
         &self.images
     }
 
@@ -259,15 +259,15 @@ impl ProjectConfigLock {
 
     pub fn get_binary_names(
         &self,
-    ) -> std::collections::hash_map::Keys<'_, std::string::String, ImageBinaryConfigLock> {
+    ) -> std::collections::btree_map::Keys<'_, std::string::String, ImageBinaryConfigLock> {
         self.binaries.keys()
     }
 
     pub fn new(
         project_config_hash: Vec<u8>,
         project_internal_id: String,
-        images: HashMap<String, HashMap<String, OCIImageConfigLock>>,
-        binaries: HashMap<String, ImageBinaryConfigLock>,
+        images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>,
+        binaries: BTreeMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {
             project_config_hash,
@@ -482,8 +482,8 @@ fn merge_bindings(
 }
 
 fn merge_volumes(
-    base_volumes: &Option<HashMap<PathBuf, VolumeConfig>>,
-    new_volumes: &Option<HashMap<PathBuf, VolumeConfig>>,
+    base_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
+    new_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
     project_internal_id: &String,
     image_ref: &String,
     binary_name: &String,
@@ -495,7 +495,7 @@ fn merge_volumes(
                 for (var_name, var_value) in _new_volumes {
                     merged_volumes.insert(var_name.clone(), var_value.clone());
                 }
-                generate_volume_config_lock(Some(merged_volumes), project_internal_id, image_ref, binary_name),
+                generate_volume_config_lock(&Some(merged_volumes), project_internal_id, image_ref, binary_name)
             }
             None => generate_volume_config_lock(base_volumes, project_internal_id, image_ref, binary_name),
         },
@@ -504,7 +504,7 @@ fn merge_volumes(
 }
 
 fn generate_volume_config_lock(
-    image_volume_configs: &Option<HashMap<PathBuf, VolumeConfig>>,
+    image_volume_configs: &Option<BTreeMap<PathBuf, VolumeConfig>>,
     project_internal_id: &String,
     image_ref: &String,
     binary_name: &String,
@@ -554,9 +554,9 @@ fn generate_volume_name(
 }
 
 fn merge_envs(
-    base_env: &Option<HashMap<String, String>>,
-    new_env: &Option<HashMap<String, String>>,
-) -> Option<HashMap<String, String>> {
+    base_env: &Option<BTreeMap<String, String>>,
+    new_env: &Option<BTreeMap<String, String>>,
+) -> Option<BTreeMap<String, String>> {
     match base_env {
         Some(_base_env) => match new_env {
             Some(_new_env) => {
@@ -573,9 +573,9 @@ fn merge_envs(
 }
 
 fn merge_envs_from_host(
-    base_env: &Option<HashSet<String>>,
-    new_env: &Option<HashSet<String>>,
-) -> Option<HashSet<String>> {
+    base_env: &Option<BTreeSet<String>>,
+    new_env: &Option<BTreeSet<String>>,
+) -> Option<BTreeSet<String>> {
     match base_env {
         Some(_base_env) => match new_env {
             Some(_new_env) => Some(_base_env.union(_new_env).cloned().collect()),

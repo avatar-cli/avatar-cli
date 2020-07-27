@@ -5,7 +5,7 @@
  */
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     env,
     fs::{copy, create_dir_all, remove_dir_all},
     os::unix::fs::symlink,
@@ -167,16 +167,16 @@ fn update_project_state(
 
 fn get_image_compiled_configs(
     config: &ProjectConfig,
-) -> HashMap<String, HashMap<String, OCIImageConfigLock>> {
+) -> BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
     match config.get_images() {
         Some(images) => images.iter().map(compile_image_configs).collect(),
-        None => HashMap::new(),
+        None => BTreeMap::new(),
     }
 }
 
 fn compile_image_configs(
-    (image_name, image_tags): (&String, &HashMap<String, OCIImageConfig>),
-) -> (String, HashMap<String, OCIImageConfigLock>) {
+    (image_name, image_tags): (&String, &BTreeMap<String, OCIImageConfig>),
+) -> (String, BTreeMap<String, OCIImageConfigLock>) {
     if image_tags.is_empty() {
         eprintln!("No tags are defined for image {}", image_name);
         exit(exitcode::DATAERR)
@@ -256,9 +256,9 @@ fn get_image_config_by_tag(
 
 fn get_binaries_settings(
     config: &ProjectConfig,
-    images_name_tag_hash_rel: &HashMap<String, HashMap<String, OCIImageConfigLock>>,
-) -> HashMap<String, ImageBinaryConfigLock> {
-    let mut dst_binaries: HashMap<String, ImageBinaryConfigLock> = HashMap::new();
+    images_name_tag_hash_rel: &BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>,
+) -> BTreeMap<String, ImageBinaryConfigLock> {
+    let mut dst_binaries: BTreeMap<String, ImageBinaryConfigLock> = BTreeMap::new();
 
     if let Some(images) = config.get_images() {
         for (image_name, image_tags) in images {
