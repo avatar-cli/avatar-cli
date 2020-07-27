@@ -3,7 +3,7 @@ name = "avatar-cli"
 version = "0.13.0"
 license = "GPL-3.0"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
-keywords = [ "avatar", "avatar-cli", "docker", "containers" ]
+keywords = [ "cli", "containers", "docker" ]
 categories = [
   "config",
   "command-line-utilities",
