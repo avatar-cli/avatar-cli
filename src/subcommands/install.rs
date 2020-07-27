@@ -22,7 +22,7 @@ use crate::{
     project_config::{
         get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
         OCIContainerRunConfig, OCIImageConfig, OCIImageConfigLock, ProjectConfig,
-        ProjectConfigLock,
+        ProjectConfigLock, VolumeConfigLock,
     },
 };
 
@@ -53,6 +53,7 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
     let (project_state, changed_state) =
         check_project_settings(&config_path, &config_lock_path, &project_state_path);
     let pulled_oci_images = check_oci_images_availability(&project_state);
+    check_managed_volumes_availability(&project_state);
     populate_volatile_bin_dir(
         &project_path,
         &project_state,
@@ -434,6 +435,50 @@ fn populate_volatile_bin_dir(
         if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
             eprintln!("Unable to create symlink to {} binary", binary_name);
             exit(exitcode::CANTCREAT)
+        }
+    }
+}
+
+fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
+    for (_, binary_config) in project_state.get_binaries_configs() {
+        if let Some(run_config) = binary_config.get_run_config() {
+            if let Some(volume_configs) = run_config.get_volumes() {
+                volume_configs
+                    .iter()
+                    .for_each(check_managed_volume_existence);
+            }
+        }
+    }
+}
+
+fn check_managed_volume_existence(volume_config: &VolumeConfigLock) {
+    match Command::new("docker")
+        .args(&["volume", "inspect", volume_config.get_name()])
+        .output()
+    {
+        Ok(output) => {
+            if !output.status.success() {
+                create_volume(volume_config.get_name());
+            }
+        },
+        Err(e) => {
+            eprintln!("Unable to inspect volume {}\n\n{}\n", volume_config.get_name(), e.to_string());
+            exit(exitcode::OSERR)
+        }
+    }
+}
+
+fn create_volume(volume_name: &str) {
+    match Command::new("docker").args(&["volume", "create", volume_name]).output() {
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Unable to create volume {}", volume_name);
+                exit(1);
+            }
+        },
+        Err(e) => {
+            eprintln!("Unable to create volume {}\n\n{}\n", volume_name, e.to_string());
+            exit(exitcode::OSERR)
         }
     }
 }

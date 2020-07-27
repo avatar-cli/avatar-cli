@@ -144,6 +144,12 @@ pub(crate) struct VolumeConfigLock {
     volume_name: String,
 }
 
+impl VolumeConfigLock {
+    pub fn get_name(&self) -> &String {
+        &self.volume_name
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OCIContainerRunConfigLock {
@@ -160,6 +166,10 @@ impl OCIContainerRunConfigLock {
 
     pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
         &self.env_from_host
+    }
+
+    pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
+        &self.volumes
     }
 }
 
@@ -261,6 +271,12 @@ impl ProjectConfigLock {
         &self,
     ) -> std::collections::btree_map::Keys<'_, std::string::String, ImageBinaryConfigLock> {
         self.binaries.keys()
+    }
+
+    pub fn get_binaries_configs(
+        &self,
+    ) -> std::collections::btree_map::Iter<'_, std::string::String, ImageBinaryConfigLock> {
+        self.binaries.iter()
     }
 
     pub fn new(
@@ -495,11 +511,23 @@ fn merge_volumes(
                 for (var_name, var_value) in _new_volumes {
                     merged_volumes.insert(var_name.clone(), var_value.clone());
                 }
-                generate_volume_config_lock(&Some(merged_volumes), project_internal_id, image_ref, binary_name)
+                generate_volume_config_lock(
+                    &Some(merged_volumes),
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                )
             }
-            None => generate_volume_config_lock(base_volumes, project_internal_id, image_ref, binary_name),
+            None => generate_volume_config_lock(
+                base_volumes,
+                project_internal_id,
+                image_ref,
+                binary_name,
+            ),
         },
-        None => generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name),
+        None => {
+            generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name)
+        }
     }
 }
 
@@ -520,10 +548,10 @@ fn generate_volume_config_lock(
                         image_ref,
                         binary_name,
                         volume_config,
-                        container_path
+                        container_path,
                     ),
                 })
-                .collect()
+                .collect(),
         ),
         None => Option::<Vec<VolumeConfigLock>>::None,
     }
@@ -542,7 +570,10 @@ fn generate_volume_name(
             let container_path_bytes = match container_path.to_str() {
                 Some(cp) => cp.as_bytes(),
                 None => {
-                    eprintln!("The volume container path {} can't be properly converted to utf8 string", container_path.to_string_lossy());
+                    eprintln!(
+                        "The volume container path {} can't be properly converted to utf8 string",
+                        container_path.to_string_lossy()
+                    );
                     exit(exitcode::USAGE)
                 }
             };
@@ -551,8 +582,13 @@ fn generate_volume_name(
 
             match volume_config.scope {
                 VolumeScope::Project => format!("prj_{}_{}", project_internal_id, path_hash),
-                VolumeScope::OCIImage => format!("img_{}_{}_{}", project_internal_id, image_ref, path_hash),
-                VolumeScope::Binary => format!("bin_{}_{}_{}_{}", project_internal_id, image_ref, binary_name, path_hash),
+                VolumeScope::OCIImage => {
+                    format!("img_{}_{}_{}", project_internal_id, image_ref, path_hash)
+                }
+                VolumeScope::Binary => format!(
+                    "bin_{}_{}_{}_{}",
+                    project_internal_id, image_ref, binary_name, path_hash
+                ),
             }
         }
     }
