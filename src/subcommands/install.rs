@@ -458,26 +458,75 @@ fn check_managed_volume_existence(volume_config: &VolumeConfigLock) {
     {
         Ok(output) => {
             if !output.status.success() {
-                create_volume(volume_config.get_name());
+                create_volume(volume_config.get_name(), volume_config.get_container_path());
             }
-        },
+        }
         Err(e) => {
-            eprintln!("Unable to inspect volume {}\n\n{}\n", volume_config.get_name(), e.to_string());
+            eprintln!(
+                "Unable to inspect volume {}\n\n{}\n",
+                volume_config.get_name(),
+                e.to_string()
+            );
             exit(exitcode::OSERR)
         }
     }
 }
 
-fn create_volume(volume_name: &str) {
-    match Command::new("docker").args(&["volume", "create", volume_name]).output() {
+fn create_volume(volume_name: &str, container_path: &PathBuf) {
+    match Command::new("docker")
+        .args(&["volume", "create", volume_name])
+        .output()
+    {
         Ok(output) => {
             if !output.status.success() {
                 eprintln!("Unable to create volume {}", volume_name);
-                exit(1);
+                exit(exitcode::SOFTWARE);
             }
-        },
+
+            change_volume_permissions(volume_name, container_path)
+        }
         Err(e) => {
-            eprintln!("Unable to create volume {}\n\n{}\n", volume_name, e.to_string());
+            eprintln!(
+                "Unable to create volume {}\n\n{}\n",
+                volume_name,
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    }
+}
+
+fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
+    match Command::new("docker")
+        .args(&[
+            "run",
+            "--rm",
+            "--volume",
+            &format!("{}:{}", volume_name, container_path.display()),
+            "alpine:3.12",
+            "sh",
+            "-c",
+            &format!(
+                "chown -R {}:{} {}",
+                nix::unistd::getuid(),
+                nix::unistd::getgid(),
+                container_path.display()
+            ),
+        ])
+        .output()
+    {
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Unable to change permissions for volume {}", volume_name);
+                exit(exitcode::SOFTWARE);
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Unable to change permissions for volume {}\n\n{}\n",
+                volume_name,
+                e.to_string()
+            );
             exit(exitcode::OSERR)
         }
     }
