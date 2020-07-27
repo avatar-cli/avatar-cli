@@ -536,20 +536,25 @@ fn generate_volume_name(
     volume_config: &VolumeConfig,
     container_path: &PathBuf,
 ) -> String {
-    let container_path_bytes = match container_path.to_str() {
-        Some(cp) => cp.as_bytes(),
+    match &volume_config.name {
+        Some(volume_name) => volume_name.clone(),
         None => {
-            eprintln!("The volume container path {} can't be properly converted to utf8 string", container_path.to_string_lossy());
-            exit(exitcode::USAGE)
-        }
-    };
-    let path_hash = digest(&SHA256, &container_path_bytes);
-    let path_hash = hex::encode(&path_hash.as_ref()[0..16]);
+            let container_path_bytes = match container_path.to_str() {
+                Some(cp) => cp.as_bytes(),
+                None => {
+                    eprintln!("The volume container path {} can't be properly converted to utf8 string", container_path.to_string_lossy());
+                    exit(exitcode::USAGE)
+                }
+            };
+            let path_hash = digest(&SHA256, &container_path_bytes);
+            let path_hash = hex::encode(&path_hash.as_ref()[0..16]);
 
-    match volume_config.scope {
-        VolumeScope::Project => format!("prj_{}_{}", project_internal_id, path_hash),
-        VolumeScope::OCIImage => format!("img_{}_{}_{}", project_internal_id, image_ref, path_hash),
-        VolumeScope::Binary => format!("bin_{}_{}_{}_{}", project_internal_id, image_ref, binary_name, path_hash),
+            match volume_config.scope {
+                VolumeScope::Project => format!("prj_{}_{}", project_internal_id, path_hash),
+                VolumeScope::OCIImage => format!("img_{}_{}_{}", project_internal_id, image_ref, path_hash),
+                VolumeScope::Binary => format!("bin_{}_{}_{}_{}", project_internal_id, image_ref, binary_name, path_hash),
+            }
+        }
     }
 }
 
