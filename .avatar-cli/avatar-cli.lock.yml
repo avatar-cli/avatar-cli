@@ -14,10 +14,24 @@ images:
         volumes: ~
         bindings: ~
 binaries:
-  npx:
+  node:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: npx
+    path: node
+    runConfig:
+      env:
+        A_GLOBAL_VAR: hello
+        THEANSWERTOEVERYTHING: "42"
+      envFromHost:
+        - NPM_TOKEN
+      volumes:
+        - containerPath: /caches
+          volumeName: prj_v2ZmtbkGuVdvGwVE_c17fc2edf9c824b004991caf42663166
+      bindings: ~
+  npm:
+    ociImageName: node
+    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
+    path: npm
     runConfig:
       env:
         A_GLOBAL_VAR: hello
@@ -26,10 +40,10 @@ binaries:
         - NPM_TOKEN
       volumes: ~
       bindings: ~
-  npm:
+  npx:
     ociImageName: node
     ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: npm
+    path: npx
     runConfig:
       env:
         A_GLOBAL_VAR: hello
@@ -49,18 +63,4 @@ binaries:
       envFromHost:
         - NPM_TOKEN
       volumes: ~
-      bindings: ~
-  node:
-    ociImageName: node
-    ociImageHash: c0ae3ecaf72d7feacce7d516d0d9c93724a3dd58ec352401a51a9e7f32407af1
-    path: node
-    runConfig:
-      env:
-        A_GLOBAL_VAR: hello
-        THEANSWERTOEVERYTHING: "42"
-      envFromHost:
-        - NPM_TOKEN
-      volumes:
-        - containerPath: /caches
-          volumeName: prj_v2ZmtbkGuVdvGwVE_c17fc2edf9c824b004991caf42663166
       bindings: ~
