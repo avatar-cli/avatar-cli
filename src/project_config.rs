@@ -34,7 +34,7 @@ impl VolumeScope {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct VolumeConfig {
-    container_path: PathBuf,
+    name: Option<String>,
     #[serde(default = "VolumeScope::default")]
     scope: VolumeScope,
 }
@@ -51,7 +51,7 @@ pub(crate) struct BindingConfig {
 pub(crate) struct OCIContainerRunConfig {
     env: Option<HashMap<String, String>>,
     env_from_host: Option<HashSet<String>>,
-    volumes: Option<Vec<VolumeConfig>>,
+    volumes: Option<HashMap<PathBuf, VolumeConfig>>,
     bindings: Option<Vec<BindingConfig>>,
 }
 
@@ -64,7 +64,7 @@ impl OCIContainerRunConfig {
         &self.env_from_host
     }
 
-    pub fn get_volumes(&self) -> &Option<Vec<VolumeConfig>> {
+    pub fn get_volumes(&self) -> &Option<HashMap<PathBuf, VolumeConfig>> {
         &self.volumes
     }
 
@@ -482,25 +482,29 @@ fn merge_bindings(
 }
 
 fn merge_volumes(
-    base_volumes: &Option<Vec<VolumeConfig>>,
-    new_volumes: &Option<Vec<VolumeConfig>>,
+    base_volumes: &Option<HashMap<PathBuf, VolumeConfig>>,
+    new_volumes: &Option<HashMap<PathBuf, VolumeConfig>>,
     project_internal_id: &String,
     image_ref: &String,
     binary_name: &String,
 ) -> Option<Vec<VolumeConfigLock>> {
-    // TODO: Improve merge strategy
-    match new_volumes {
-        Some(_) => {
-            generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name)
-        }
-        None => {
-            generate_volume_config_lock(base_volumes, project_internal_id, image_ref, binary_name)
-        }
+    match base_volumes {
+        Some(_base_volumes) => match new_volumes {
+            Some(_new_volumes) => {
+                let mut merged_volumes = _base_volumes.clone();
+                for (var_name, var_value) in _new_volumes {
+                    merged_volumes.insert(var_name.clone(), var_value.clone());
+                }
+                generate_volume_config_lock(Some(merged_volumes), project_internal_id, image_ref, binary_name),
+            }
+            None => generate_volume_config_lock(base_volumes, project_internal_id, image_ref, binary_name),
+        },
+        None => generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name),
     }
 }
 
 fn generate_volume_config_lock(
-    image_volume_configs: &Option<Vec<VolumeConfig>>,
+    image_volume_configs: &Option<HashMap<PathBuf, VolumeConfig>>,
     project_internal_id: &String,
     image_ref: &String,
     binary_name: &String,
@@ -509,16 +513,17 @@ fn generate_volume_config_lock(
         Some(_src_volume_config) => Some(
             _src_volume_config
                 .iter()
-                .map(|volume_config| VolumeConfigLock {
-                    container_path: volume_config.container_path.clone(),
+                .map(|(container_path, volume_config)| VolumeConfigLock {
+                    container_path: container_path.clone(),
                     volume_name: generate_volume_name(
                         project_internal_id,
                         image_ref,
                         binary_name,
                         volume_config,
+                        container_path
                     ),
                 })
-                .collect(),
+                .collect()
         ),
         None => Option::<Vec<VolumeConfigLock>>::None,
     }
@@ -529,11 +534,12 @@ fn generate_volume_name(
     image_ref: &String,
     binary_name: &String,
     volume_config: &VolumeConfig,
+    container_path: &PathBuf,
 ) -> String {
-    let container_path_bytes = match volume_config.container_path.to_str() {
+    let container_path_bytes = match container_path.to_str() {
         Some(cp) => cp.as_bytes(),
         None => {
-            eprintln!("The volume container path {} can't be properly converted to utf8 string", volume_config.container_path.to_string_lossy());
+            eprintln!("The volume container path {} can't be properly converted to utf8 string", container_path.to_string_lossy());
             exit(exitcode::USAGE)
         }
     };

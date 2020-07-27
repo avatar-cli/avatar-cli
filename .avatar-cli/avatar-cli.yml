@@ -21,7 +21,7 @@ images:
             envFromHost:
               - NPM_TOKEN
             volumes:
-              - containerPath: /caches
+              "/caches": {}
         npm:
           path: npm
         npx:
