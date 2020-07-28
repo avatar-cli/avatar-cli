@@ -1,5 +1,7 @@
 # Avatar CLI
 
+[![pipeline status](https://gitlab.com/avatar-cli/avatar-cli/badges/dev/pipeline.svg)](https://gitlab.com/avatar-cli/avatar-cli/-/commits/dev)
+
 ## Introduction
 
 Avatar-CLI is a statically-liked single-binary command line tool meant to ease
