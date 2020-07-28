@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ -t 1 ]; then
+  exec < /dev/tty ;
+fi

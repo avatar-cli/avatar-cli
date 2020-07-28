@@ -18,9 +18,13 @@ async function run(): Promise<void> {
   }
 
   const fakeGitDir = `${env.CX_PROJECT_DIR}/cx/.git`
-  await symlink(`${env.CX_PROJECT_DIR}/.git`, fakeGitDir)
+  if (!existsSync(fakeGitDir)) {
+    await symlink(`${env.CX_PROJECT_DIR}/.git`, fakeGitDir)
+  }
   try {
-    execSync('exec < /dev/tty && npm run git-cz -- --hook', { stdio: ['inherit', 'inherit', 'inherit'] })
+    execSync('if [ -t 1 ]; then exec < /dev/tty ; fi && npm run git-cz -- --hook', {
+      stdio: ['inherit', 'inherit', 'inherit'],
+    })
   } catch {
     // Do nothing if it fails
   }
