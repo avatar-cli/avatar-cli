@@ -9,6 +9,7 @@ boilerplate_checks:
   image: 'node:14-buster'
   except:
     refs:
+      - dev
       - main
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
@@ -21,6 +22,7 @@ test:
   image: 'rust:1.45-stretch'
   except:
     refs:
+      - dev
       - main
   script:
     - rustup component add clippy --toolchain 1.45.0-x86_64-unknown-linux-gnu
