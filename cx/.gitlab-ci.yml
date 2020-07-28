@@ -38,7 +38,7 @@ crates_publish:
     CARGO_TOKEN: $CARGO_TOKEN
   script:
     - cargo login ${CARGO_TOKEN}
-    - cargo publish
+    - cargo publish --no-verify
 
 include:
   # See https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
