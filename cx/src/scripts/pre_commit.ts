@@ -35,7 +35,7 @@ async function updatePackageLockJson(newVersion: string): Promise<boolean> {
 
 async function updateJsonFile(filename: string, newVersion: string): Promise<boolean> {
   const filePath = pathJoin(__dirname, '..', '..', filename)
-  const jsonObject: { [key: string]: any } = JSON.parse(await readFile(filePath, { encoding: 'utf8' }))
+  const jsonObject: { [key: string]: unknown } = JSON.parse(await readFile(filePath, { encoding: 'utf8' }))
 
   if (jsonObject?.version === newVersion) {
     return false
