@@ -1,3 +1,6 @@
+import { lstatSync, realpathSync } from 'fs'
+import { resolve } from 'path'
+
 import { trimmedCxExec } from './exec'
 
 export type CxGitEnv = {
@@ -31,7 +34,11 @@ async function getGitCommitHash(): Promise<string> {
 }
 
 async function getProjectDirectory(): Promise<string> {
-  return trimmedCxExec('git rev-parse --show-toplevel')
+  const projectDir = await trimmedCxExec('git rev-parse --show-toplevel')
+  const gitDir = `${projectDir}/.git`
+
+  // We do this to avoid problems with a commitizen-related workaround, see prepare_commit_msg.ts
+  return lstatSync(gitDir).isSymbolicLink() ? resolve(realpathSync(gitDir), '..') : projectDir
 }
 
 export async function getCxEnvVars(): Promise<CxEnv> {
