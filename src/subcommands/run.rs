@@ -227,6 +227,10 @@ fn run_docker_command(
     };
 
     let uid = nix::unistd::getuid();
+    let home_path = project_path
+        .join(".avatar-cli")
+        .join("volatile")
+        .join("home");
 
     Command::new("docker")
         .args(&["run", "--rm", "--init"])
@@ -253,6 +257,13 @@ fn run_docker_command(
             ),
             "--workdir",
             &format!("/playground/{}", working_dir.display()),
+            "--mount",
+            &format!(
+                "type=bind,source={},target=/home/avatar-cli",
+                home_path.display() // TODO: Escape commas?
+            ),
+            "--env",
+            "HOME=/home/avatar-cli"
         ])
         .args(dynamic_mounts)
         .args(get_user_integration_args(uid))
