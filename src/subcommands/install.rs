@@ -383,6 +383,10 @@ fn populate_volatile_bin_dir(
         .join(".avatar-cli")
         .join("volatile")
         .join("bin");
+    let home_path = project_path
+        .join(".avatar-cli")
+        .join("volatile")
+        .join("home");
 
     if bin_path.exists() {
         if !bin_path.is_dir() {
@@ -407,6 +411,12 @@ fn populate_volatile_bin_dir(
     if create_dir_all(&bin_path).is_err() {
         eprintln!("Unable to create directory {}", bin_path.display());
         exit(exitcode::CANTCREAT)
+    }
+    if !home_path.exists() {
+        if create_dir_all(&home_path).is_err() {
+            eprintln!("Unable to create directory {}", home_path.display());
+            exit(exitcode::CANTCREAT)
+        }
     }
 
     let avatar_path = match env::current_exe() {
