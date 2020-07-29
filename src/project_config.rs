@@ -18,59 +18,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::subcommands::AVATAR_CLI_VERSION;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-enum VolumeScope {
-    Project,
-    OCIImage,
-    Binary,
-}
-
-impl VolumeScope {
-    fn default() -> Self {
-        VolumeScope::Project
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct VolumeConfig {
-    name: Option<String>,
-    #[serde(default = "VolumeScope::default")]
-    scope: VolumeScope,
-}
+// Structs, Enums & their Impl blocks:
+// -----------------------------------------------------------------------------
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BindingConfig {
     host_path: PathBuf,
     container_path: PathBuf,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct OCIContainerRunConfig {
-    env: Option<BTreeMap<String, String>>,
-    env_from_host: Option<BTreeSet<String>>,
-    volumes: Option<BTreeMap<PathBuf, VolumeConfig>>,
-    bindings: Option<Vec<BindingConfig>>,
-}
-
-impl OCIContainerRunConfig {
-    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
-        &self.env
-    }
-
-    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
-        &self.env_from_host
-    }
-
-    pub fn get_volumes(&self) -> &Option<BTreeMap<PathBuf, VolumeConfig>> {
-        &self.volumes
-    }
-
-    pub fn get_bindings(&self) -> &Option<Vec<BindingConfig>> {
-        &self.bindings
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -87,93 +42,6 @@ impl ImageBinaryConfig {
 
     pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
         &self.run_config
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct OCIImageConfig {
-    binaries: Option<BTreeMap<String, ImageBinaryConfig>>,
-    run_config: Option<OCIContainerRunConfig>,
-}
-
-impl OCIImageConfig {
-    pub fn get_binaries(&self) -> &Option<BTreeMap<String, ImageBinaryConfig>> {
-        &self.binaries
-    }
-
-    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
-        &self.run_config
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ProjectConfig {
-    version: String,
-    project_internal_id: String,
-    images: Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
-}
-
-impl ProjectConfig {
-    pub fn new() -> ProjectConfig {
-        let prj_internal_id: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
-
-        ProjectConfig {
-            version: AVATAR_CLI_VERSION.to_string(),
-            project_internal_id: prj_internal_id,
-            images: None,
-        }
-    }
-
-    pub fn get_project_internal_id(&self) -> &String {
-        &self.project_internal_id
-    }
-
-    pub fn get_images(&self) -> &Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>> {
-        &self.images
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct VolumeConfigLock {
-    container_path: PathBuf,
-    volume_name: String,
-}
-
-impl VolumeConfigLock {
-    pub fn get_container_path(&self) -> &PathBuf {
-        &self.container_path
-    }
-
-    pub fn get_name(&self) -> &String {
-        &self.volume_name
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct OCIContainerRunConfigLock {
-    env: Option<BTreeMap<String, String>>,
-    env_from_host: Option<BTreeSet<String>>,
-    volumes: Option<Vec<VolumeConfigLock>>,
-    bindings: Option<Vec<BindingConfig>>,
-}
-
-impl OCIContainerRunConfigLock {
-    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
-        &self.env
-    }
-
-    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
-        &self.env_from_host
-    }
-
-    pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
-        &self.volumes
     }
 }
 
@@ -220,6 +88,73 @@ impl ImageBinaryConfigLock {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct OCIContainerRunConfig {
+    env: Option<BTreeMap<String, String>>,
+    env_from_host: Option<BTreeSet<String>>,
+    volumes: Option<BTreeMap<PathBuf, VolumeConfig>>,
+    bindings: Option<Vec<BindingConfig>>,
+}
+
+impl OCIContainerRunConfig {
+    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
+        &self.env
+    }
+
+    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
+        &self.env_from_host
+    }
+
+    pub fn get_volumes(&self) -> &Option<BTreeMap<PathBuf, VolumeConfig>> {
+        &self.volumes
+    }
+
+    pub fn get_bindings(&self) -> &Option<Vec<BindingConfig>> {
+        &self.bindings
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OCIContainerRunConfigLock {
+    env: Option<BTreeMap<String, String>>,
+    env_from_host: Option<BTreeSet<String>>,
+    volumes: Option<Vec<VolumeConfigLock>>,
+    bindings: Option<Vec<BindingConfig>>,
+}
+
+impl OCIContainerRunConfigLock {
+    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
+        &self.env
+    }
+
+    pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
+        &self.env_from_host
+    }
+
+    pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
+        &self.volumes
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OCIImageConfig {
+    binaries: Option<BTreeMap<String, ImageBinaryConfig>>,
+    run_config: Option<OCIContainerRunConfig>,
+}
+
+impl OCIImageConfig {
+    pub fn get_binaries(&self) -> &Option<BTreeMap<String, ImageBinaryConfig>> {
+        &self.binaries
+    }
+
+    pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
+        &self.run_config
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct OCIImageConfigLock {
     hash: String,
     run_config: Option<OCIContainerRunConfig>,
@@ -236,6 +171,34 @@ impl OCIImageConfigLock {
 
     pub fn get_run_config(&self) -> &Option<OCIContainerRunConfig> {
         &self.run_config
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProjectConfig {
+    version: String,
+    project_internal_id: String,
+    images: Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
+}
+
+impl ProjectConfig {
+    pub fn new() -> ProjectConfig {
+        let prj_internal_id: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+
+        ProjectConfig {
+            version: AVATAR_CLI_VERSION.to_string(),
+            project_internal_id: prj_internal_id,
+            images: None,
+        }
+    }
+
+    pub fn get_project_internal_id(&self) -> &String {
+        &self.project_internal_id
+    }
+
+    pub fn get_images(&self) -> &Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>> {
+        &self.images
     }
 }
 
@@ -298,242 +261,46 @@ impl ProjectConfigLock {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct VolumeConfig {
+    name: Option<String>,
+    #[serde(default = "VolumeScope::default")]
+    scope: VolumeScope,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct VolumeConfigLock {
+    container_path: PathBuf,
+    volume_name: String,
+}
+
+impl VolumeConfigLock {
+    pub fn get_container_path(&self) -> &PathBuf {
+        &self.container_path
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.volume_name
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum VolumeScope {
+    Project,
+    OCIImage,
+    Binary,
+}
+
+impl VolumeScope {
+    fn default() -> Self {
+        VolumeScope::Project
+    }
+}
+
 // Functions:
 // -----------------------------------------------------------------------------
-
-fn get_file_bytes(filepath: &PathBuf) -> Vec<u8> {
-    if !filepath.exists() || !filepath.is_file() {
-        eprintln!("The file {} is not available", &filepath.display());
-        exit(exitcode::NOINPUT)
-    }
-
-    match read(filepath) {
-        Ok(s) => s,
-        Err(e) => match e.kind() {
-            ErrorKind::NotFound => {
-                eprintln!("The file {} is not available", filepath.display());
-                exit(exitcode::NOINPUT)
-            }
-            ErrorKind::PermissionDenied => {
-                eprintln!(
-                    "The file {} is not readable due to filesystem permissions",
-                    filepath.display()
-                );
-                exit(exitcode::IOERR)
-            }
-            _ => {
-                eprintln!(
-                    "Unknown IO error while reading the file {}",
-                    filepath.display()
-                );
-                exit(exitcode::IOERR)
-            }
-        },
-    }
-}
-
-pub(crate) fn get_config_lock(config_lock_filepath: &PathBuf) -> (ProjectConfigLock, Digest) {
-    let config_lock_bytes = get_file_bytes(config_lock_filepath);
-
-    (
-        match serde_yaml::from_slice::<ProjectConfigLock>(&config_lock_bytes) {
-            Ok(_config_lock) => _config_lock,
-            Err(e) => {
-                let error_msg = match e.location() {
-                    Some(l) => format!(
-                        "Malformed lock file '{}', line {}, column {}:\n\t{}",
-                        config_lock_filepath.display(),
-                        l.line(),
-                        l.column(),
-                        e.to_string(),
-                    ),
-                    None => format!(
-                        "Malformed lock file '{}':\n\t{}",
-                        config_lock_filepath.display(),
-                        e.to_string(),
-                    ),
-                };
-
-                eprintln!("{}", error_msg);
-                exit(exitcode::DATAERR)
-            }
-        },
-        digest(&SHA256, &config_lock_bytes),
-    )
-}
-
-pub(crate) fn get_config(config_filepath: &PathBuf) -> (ProjectConfig, Digest) {
-    let config_bytes = get_file_bytes(config_filepath);
-
-    (
-        match serde_yaml::from_slice::<ProjectConfig>(&config_bytes) {
-            Ok(_config) => _config,
-            Err(e) => {
-                let error_msg = match e.location() {
-                    Some(l) => format!(
-                        "Malformed config file '{}', line {}, column {}:\n\t{}",
-                        config_filepath.display(),
-                        l.line(),
-                        l.column(),
-                        e.to_string(),
-                    ),
-                    None => format!(
-                        "Malformed config file '{}':\n\t{}",
-                        config_filepath.display(),
-                        e.to_string(),
-                    ),
-                };
-
-                eprintln!("{}", error_msg);
-                exit(exitcode::DATAERR)
-            }
-        },
-        digest(&SHA256, &config_bytes),
-    )
-}
-
-pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) {
-    match serde_yaml::to_vec(config) {
-        Ok(serialized_config) => {
-            if let Err(e) = write(config_filepath, &serialized_config) {
-                eprintln!(
-                    "Unknown error while persisting project config:\n\n{}\n",
-                    e.to_string()
-                );
-                exit(exitcode::IOERR)
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Unknown error while serializing project config:\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::SOFTWARE)
-        }
-    }
-}
-
-pub(crate) fn save_config_lock(
-    config_lock_filepath: &PathBuf,
-    config_lock: &ProjectConfigLock,
-) -> Vec<u8> {
-    match serde_yaml::to_vec(config_lock) {
-        Ok(serialized_config_lock) => {
-            if let Err(e) = write(config_lock_filepath, &serialized_config_lock) {
-                eprintln!(
-                    "Unknown error while persisting project state:\n\n{}\n",
-                    e.to_string()
-                );
-            }
-            serialized_config_lock
-        }
-        Err(e) => {
-            eprintln!(
-                "Unknown error while serializing project state:\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::SOFTWARE)
-        }
-    }
-}
-
-pub(crate) fn merge_run_configs(
-    base_config: &Option<OCIContainerRunConfig>,
-    new_config: &Option<OCIContainerRunConfig>,
-    project_internal_id: &str,
-    image_ref: &str,
-    binary_name: &str,
-) -> Option<OCIContainerRunConfigLock> {
-    match base_config {
-        Some(_base_config) => match new_config {
-            Some(_new_config) => Some(OCIContainerRunConfigLock {
-                bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
-                volumes: merge_volumes(
-                    _base_config.get_volumes(),
-                    _new_config.get_volumes(),
-                    project_internal_id,
-                    image_ref,
-                    binary_name,
-                ),
-                env: merge_envs(_base_config.get_env(), _new_config.get_env()),
-                env_from_host: merge_envs_from_host(
-                    _base_config.get_env_from_host(),
-                    _new_config.get_env_from_host(),
-                ),
-            }),
-            None => Some(OCIContainerRunConfigLock {
-                bindings: _base_config.bindings.clone(),
-                volumes: generate_volume_config_lock(
-                    &_base_config.volumes,
-                    project_internal_id,
-                    image_ref,
-                    binary_name,
-                ),
-                env: _base_config.env.clone(),
-                env_from_host: _base_config.env_from_host.clone(),
-            }),
-        },
-        None => match new_config {
-            Some(_new_config) => Some(OCIContainerRunConfigLock {
-                bindings: _new_config.bindings.clone(),
-                volumes: generate_volume_config_lock(
-                    &_new_config.volumes,
-                    project_internal_id,
-                    image_ref,
-                    binary_name,
-                ),
-                env: _new_config.env.clone(),
-                env_from_host: _new_config.env_from_host.clone(),
-            }),
-            None => Option::<OCIContainerRunConfigLock>::None,
-        },
-    }
-}
-
-fn merge_bindings(
-    base_bindings: &Option<Vec<BindingConfig>>,
-    new_bindings: &Option<Vec<BindingConfig>>,
-) -> Option<Vec<BindingConfig>> {
-    // TODO: Improve merge strategy
-    match new_bindings {
-        Some(_) => new_bindings.clone(),
-        None => base_bindings.clone(),
-    }
-}
-
-fn merge_volumes(
-    base_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
-    new_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
-    project_internal_id: &str,
-    image_ref: &str,
-    binary_name: &str,
-) -> Option<Vec<VolumeConfigLock>> {
-    match base_volumes {
-        Some(_base_volumes) => match new_volumes {
-            Some(_new_volumes) => {
-                let mut merged_volumes = _base_volumes.clone();
-                for (var_name, var_value) in _new_volumes {
-                    merged_volumes.insert(var_name.clone(), var_value.clone());
-                }
-                generate_volume_config_lock(
-                    &Some(merged_volumes),
-                    project_internal_id,
-                    image_ref,
-                    binary_name,
-                )
-            }
-            None => generate_volume_config_lock(
-                base_volumes,
-                project_internal_id,
-                image_ref,
-                binary_name,
-            ),
-        },
-        None => {
-            generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name)
-        }
-    }
-}
 
 fn generate_volume_config_lock(
     image_volume_configs: &Option<BTreeMap<PathBuf, VolumeConfig>>,
@@ -598,6 +365,108 @@ fn generate_volume_name(
     }
 }
 
+pub(crate) fn get_config(config_filepath: &PathBuf) -> (ProjectConfig, Digest) {
+    let config_bytes = get_file_bytes(config_filepath);
+
+    (
+        match serde_yaml::from_slice::<ProjectConfig>(&config_bytes) {
+            Ok(_config) => _config,
+            Err(e) => {
+                let error_msg = match e.location() {
+                    Some(l) => format!(
+                        "Malformed config file '{}', line {}, column {}:\n\t{}",
+                        config_filepath.display(),
+                        l.line(),
+                        l.column(),
+                        e.to_string(),
+                    ),
+                    None => format!(
+                        "Malformed config file '{}':\n\t{}",
+                        config_filepath.display(),
+                        e.to_string(),
+                    ),
+                };
+
+                eprintln!("{}", error_msg);
+                exit(exitcode::DATAERR)
+            }
+        },
+        digest(&SHA256, &config_bytes),
+    )
+}
+
+pub(crate) fn get_config_lock(config_lock_filepath: &PathBuf) -> (ProjectConfigLock, Digest) {
+    let config_lock_bytes = get_file_bytes(config_lock_filepath);
+
+    (
+        match serde_yaml::from_slice::<ProjectConfigLock>(&config_lock_bytes) {
+            Ok(_config_lock) => _config_lock,
+            Err(e) => {
+                let error_msg = match e.location() {
+                    Some(l) => format!(
+                        "Malformed lock file '{}', line {}, column {}:\n\t{}",
+                        config_lock_filepath.display(),
+                        l.line(),
+                        l.column(),
+                        e.to_string(),
+                    ),
+                    None => format!(
+                        "Malformed lock file '{}':\n\t{}",
+                        config_lock_filepath.display(),
+                        e.to_string(),
+                    ),
+                };
+
+                eprintln!("{}", error_msg);
+                exit(exitcode::DATAERR)
+            }
+        },
+        digest(&SHA256, &config_lock_bytes),
+    )
+}
+
+fn get_file_bytes(filepath: &PathBuf) -> Vec<u8> {
+    if !filepath.exists() || !filepath.is_file() {
+        eprintln!("The file {} is not available", &filepath.display());
+        exit(exitcode::NOINPUT)
+    }
+
+    match read(filepath) {
+        Ok(s) => s,
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => {
+                eprintln!("The file {} is not available", filepath.display());
+                exit(exitcode::NOINPUT)
+            }
+            ErrorKind::PermissionDenied => {
+                eprintln!(
+                    "The file {} is not readable due to filesystem permissions",
+                    filepath.display()
+                );
+                exit(exitcode::IOERR)
+            }
+            _ => {
+                eprintln!(
+                    "Unknown IO error while reading the file {}",
+                    filepath.display()
+                );
+                exit(exitcode::IOERR)
+            }
+        },
+    }
+}
+
+fn merge_bindings(
+    base_bindings: &Option<Vec<BindingConfig>>,
+    new_bindings: &Option<Vec<BindingConfig>>,
+) -> Option<Vec<BindingConfig>> {
+    // TODO: Improve merge strategy
+    match new_bindings {
+        Some(_) => new_bindings.clone(),
+        None => base_bindings.clone(),
+    }
+}
+
 fn merge_envs(
     base_env: &Option<BTreeMap<String, String>>,
     new_env: &Option<BTreeMap<String, String>>,
@@ -627,5 +496,137 @@ fn merge_envs_from_host(
             None => base_env.clone(),
         },
         None => new_env.clone(),
+    }
+}
+
+pub(crate) fn merge_run_configs(
+    base_config: &Option<OCIContainerRunConfig>,
+    new_config: &Option<OCIContainerRunConfig>,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
+) -> Option<OCIContainerRunConfigLock> {
+    match base_config {
+        Some(_base_config) => match new_config {
+            Some(_new_config) => Some(OCIContainerRunConfigLock {
+                bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
+                volumes: merge_volumes(
+                    _base_config.get_volumes(),
+                    _new_config.get_volumes(),
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
+                env: merge_envs(_base_config.get_env(), _new_config.get_env()),
+                env_from_host: merge_envs_from_host(
+                    _base_config.get_env_from_host(),
+                    _new_config.get_env_from_host(),
+                ),
+            }),
+            None => Some(OCIContainerRunConfigLock {
+                bindings: _base_config.bindings.clone(),
+                volumes: generate_volume_config_lock(
+                    &_base_config.volumes,
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
+                env: _base_config.env.clone(),
+                env_from_host: _base_config.env_from_host.clone(),
+            }),
+        },
+        None => match new_config {
+            Some(_new_config) => Some(OCIContainerRunConfigLock {
+                bindings: _new_config.bindings.clone(),
+                volumes: generate_volume_config_lock(
+                    &_new_config.volumes,
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                ),
+                env: _new_config.env.clone(),
+                env_from_host: _new_config.env_from_host.clone(),
+            }),
+            None => Option::<OCIContainerRunConfigLock>::None,
+        },
+    }
+}
+
+fn merge_volumes(
+    base_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
+    new_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
+) -> Option<Vec<VolumeConfigLock>> {
+    match base_volumes {
+        Some(_base_volumes) => match new_volumes {
+            Some(_new_volumes) => {
+                let mut merged_volumes = _base_volumes.clone();
+                for (var_name, var_value) in _new_volumes {
+                    merged_volumes.insert(var_name.clone(), var_value.clone());
+                }
+                generate_volume_config_lock(
+                    &Some(merged_volumes),
+                    project_internal_id,
+                    image_ref,
+                    binary_name,
+                )
+            }
+            None => generate_volume_config_lock(
+                base_volumes,
+                project_internal_id,
+                image_ref,
+                binary_name,
+            ),
+        },
+        None => {
+            generate_volume_config_lock(new_volumes, project_internal_id, image_ref, binary_name)
+        }
+    }
+}
+
+pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) {
+    match serde_yaml::to_vec(config) {
+        Ok(serialized_config) => {
+            if let Err(e) = write(config_filepath, &serialized_config) {
+                eprintln!(
+                    "Unknown error while persisting project config:\n\n{}\n",
+                    e.to_string()
+                );
+                exit(exitcode::IOERR)
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Unknown error while serializing project config:\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::SOFTWARE)
+        }
+    }
+}
+
+pub(crate) fn save_config_lock(
+    config_lock_filepath: &PathBuf,
+    config_lock: &ProjectConfigLock,
+) -> Vec<u8> {
+    match serde_yaml::to_vec(config_lock) {
+        Ok(serialized_config_lock) => {
+            if let Err(e) = write(config_lock_filepath, &serialized_config_lock) {
+                eprintln!(
+                    "Unknown error while persisting project state:\n\n{}\n",
+                    e.to_string()
+                );
+            }
+            serialized_config_lock
+        }
+        Err(e) => {
+            eprintln!(
+                "Unknown error while serializing project state:\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::SOFTWARE)
+        }
     }
 }
