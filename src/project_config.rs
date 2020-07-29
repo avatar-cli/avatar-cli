@@ -440,9 +440,9 @@ pub(crate) fn save_config_lock(
 pub(crate) fn merge_run_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
-    project_internal_id: &String,
-    image_ref: &String,
-    binary_name: &String,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
 ) -> Option<OCIContainerRunConfigLock> {
     match base_config {
         Some(_base_config) => match new_config {
@@ -504,9 +504,9 @@ fn merge_bindings(
 fn merge_volumes(
     base_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
     new_volumes: &Option<BTreeMap<PathBuf, VolumeConfig>>,
-    project_internal_id: &String,
-    image_ref: &String,
-    binary_name: &String,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
 ) -> Option<Vec<VolumeConfigLock>> {
     match base_volumes {
         Some(_base_volumes) => match new_volumes {
@@ -537,9 +537,9 @@ fn merge_volumes(
 
 fn generate_volume_config_lock(
     image_volume_configs: &Option<BTreeMap<PathBuf, VolumeConfig>>,
-    project_internal_id: &String,
-    image_ref: &String,
-    binary_name: &String,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
 ) -> Option<Vec<VolumeConfigLock>> {
     match image_volume_configs {
         Some(_src_volume_config) => Some(
@@ -562,9 +562,9 @@ fn generate_volume_config_lock(
 }
 
 fn generate_volume_name(
-    project_internal_id: &String,
-    image_ref: &String,
-    binary_name: &String,
+    project_internal_id: &str,
+    image_ref: &str,
+    binary_name: &str,
     volume_config: &VolumeConfig,
     container_path: &PathBuf,
 ) -> String {
