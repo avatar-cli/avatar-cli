@@ -253,6 +253,7 @@ fn run_docker_command(
             &format!("/playground/{}", working_dir.display()),
         ])
         .args(dynamic_mounts)
+        .args(get_ssh_agent_args())
         .arg(format!(
             "{}@sha256:{}",
             binary_configuration.get_oci_image_name(),
@@ -261,4 +262,16 @@ fn run_docker_command(
         .arg(binary_configuration.get_path())
         .args(env::args().skip(skip_args))
         .exec(); // Only for UNIX
+}
+
+fn get_ssh_agent_args() -> Vec<String> {
+    match env::var("SSH_AUTH_SOCK") {
+        Ok(v) => vec![
+            "--mount".to_string(),
+            format!("type=bind,source={},target={}", v, v),
+            "--env".to_string(),
+            format!("SSH_AUTH_SOCK={}", v),
+        ],
+        Err(_) => vec![],
+    }
 }
