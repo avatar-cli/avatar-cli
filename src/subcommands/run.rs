@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::process::{exit, Command};
 
 extern crate atty;
+extern crate dirs;
 extern crate exitcode;
 extern crate nix;
 extern crate which;
@@ -263,7 +264,7 @@ fn run_docker_command(
                 home_path.display() // TODO: Escape commas?
             ),
             "--env",
-            "HOME=/home/avatar-cli"
+            "HOME=/home/avatar-cli",
         ])
         .args(dynamic_mounts)
         .args(get_user_integration_args(uid))
@@ -292,6 +293,18 @@ fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
         ssh_agent_args.push(format!("type=bind,source={},target={}", v, v));
         ssh_agent_args.push("--env".to_string());
         ssh_agent_args.push(format!("SSH_AUTH_SOCK={}", v));
+    }
+
+    if let Some(home_dir) = dirs::home_dir() {
+        let ssh_config_dir = home_dir.join(".ssh");
+
+        if ssh_config_dir.exists() && ssh_config_dir.is_dir() {
+            ssh_agent_args.push("--mount".to_string());
+            ssh_agent_args.push(format!(
+                "type=bind,source={},target=/home/avatar-cli/.ssh",
+                ssh_config_dir.display()
+            ));
+        }
     }
 
     ssh_agent_args

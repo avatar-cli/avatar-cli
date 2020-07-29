@@ -26,6 +26,7 @@ status = "experimental"
 [dependencies]
 atty = "0.2"
 clap = "2.33.1"
+dirs = "3.0.1"
 exitcode = "1.1.2"
 nix = "0.17.0"
 ring = "0.16.15"
