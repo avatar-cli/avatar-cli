@@ -152,7 +152,7 @@ fn run_docker_command(
     }
 
     let mut dynamic_env: Vec<String> = Vec::new();
-    let mut dynamic_volumes: Vec<String> = Vec::new();
+    let mut dynamic_mounts: Vec<String> = Vec::new();
     if let Some(run_config) = binary_configuration.get_run_config() {
         if let Some(used_defined_env_vars) = run_config.get_env() {
             for (var_name, var_value) in used_defined_env_vars {
@@ -182,11 +182,22 @@ fn run_docker_command(
 
         if let Some(volumes) = run_config.get_volumes() {
             for volume_config in volumes {
-                dynamic_volumes.push("--volume".to_string());
-                dynamic_volumes.push(format!(
+                dynamic_mounts.push("--volume".to_string());
+                dynamic_mounts.push(format!(
                     "{}:{}",
                     volume_config.get_name(),
                     volume_config.get_container_path().display()
+                ));
+            }
+        }
+
+        if let Some(bindings) = run_config.get_bindings() {
+            for (container_path, host_path) in bindings {
+                dynamic_mounts.push("--mount".to_string());
+                dynamic_mounts.push(format!(
+                    "type=bind,source={},target={}",
+                    host_path.display(),
+                    container_path.display()
                 ));
             }
         }
@@ -241,7 +252,7 @@ fn run_docker_command(
             "--workdir",
             &format!("/playground/{}", working_dir.display()),
         ])
-        .args(dynamic_volumes)
+        .args(dynamic_mounts)
         .arg(format!(
             "{}@sha256:{}",
             binary_configuration.get_oci_image_name(),

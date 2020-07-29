@@ -23,13 +23,6 @@ use crate::subcommands::AVATAR_CLI_VERSION;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BindingConfig {
-    host_path: PathBuf,
-    container_path: PathBuf,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfig {
     path: PathBuf,
     run_config: Option<OCIContainerRunConfig>,
@@ -91,8 +84,8 @@ impl ImageBinaryConfigLock {
 pub(crate) struct OCIContainerRunConfig {
     env: Option<BTreeMap<String, String>>,
     env_from_host: Option<BTreeSet<String>>,
-    volumes: Option<BTreeMap<PathBuf, VolumeConfig>>,
-    bindings: Option<Vec<BindingConfig>>,
+    volumes: Option<BTreeMap<PathBuf, VolumeConfig>>, // container path -> volume config
+    bindings: Option<BTreeMap<PathBuf, PathBuf>>,     // container path -> host path
 }
 
 impl OCIContainerRunConfig {
@@ -108,7 +101,7 @@ impl OCIContainerRunConfig {
         &self.volumes
     }
 
-    pub fn get_bindings(&self) -> &Option<Vec<BindingConfig>> {
+    pub fn get_bindings(&self) -> &Option<BTreeMap<PathBuf, PathBuf>> {
         &self.bindings
     }
 }
@@ -119,7 +112,7 @@ pub(crate) struct OCIContainerRunConfigLock {
     env: Option<BTreeMap<String, String>>,
     env_from_host: Option<BTreeSet<String>>,
     volumes: Option<Vec<VolumeConfigLock>>,
-    bindings: Option<Vec<BindingConfig>>,
+    bindings: Option<BTreeMap<PathBuf, PathBuf>>,
 }
 
 impl OCIContainerRunConfigLock {
@@ -133,6 +126,10 @@ impl OCIContainerRunConfigLock {
 
     pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
         &self.volumes
+    }
+
+    pub fn get_bindings(&self) -> &Option<BTreeMap<PathBuf, PathBuf>> {
+        &self.bindings
     }
 }
 
@@ -457,13 +454,21 @@ fn get_file_bytes(filepath: &PathBuf) -> Vec<u8> {
 }
 
 fn merge_bindings(
-    base_bindings: &Option<Vec<BindingConfig>>,
-    new_bindings: &Option<Vec<BindingConfig>>,
-) -> Option<Vec<BindingConfig>> {
-    // TODO: Improve merge strategy
-    match new_bindings {
-        Some(_) => new_bindings.clone(),
-        None => base_bindings.clone(),
+    base_bindings: &Option<BTreeMap<PathBuf, PathBuf>>,
+    new_bindings: &Option<BTreeMap<PathBuf, PathBuf>>,
+) -> Option<BTreeMap<PathBuf, PathBuf>> {
+    match base_bindings {
+        Some(_base_bindings) => match new_bindings {
+            Some(_new_bindings) => {
+                let mut merged_bindings = _base_bindings.clone();
+                for (container_path, host_path) in _new_bindings {
+                    merged_bindings.insert(container_path.clone(), host_path.clone());
+                }
+                Some(merged_bindings)
+            }
+            None => base_bindings.clone(),
+        },
+        None => new_bindings.clone(),
     }
 }
 
