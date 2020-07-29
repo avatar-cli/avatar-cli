@@ -226,6 +226,8 @@ fn run_docker_command(
         None => "yyy",
     };
 
+    let uid = nix::unistd::getuid();
+
     Command::new("docker")
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
@@ -243,7 +245,7 @@ fn run_docker_command(
             "--env",
             &format!("{}={}", SESSION_TOKEN, session_token),
             "--user",
-            &format!("{}:{}", nix::unistd::getuid(), nix::unistd::getgid()),
+            &format!("{}:{}", uid, nix::unistd::getgid()),
             "--mount",
             &format!(
                 "type=bind,source={},target=/playground",
@@ -253,7 +255,7 @@ fn run_docker_command(
             &format!("/playground/{}", working_dir.display()),
         ])
         .args(dynamic_mounts)
-        .args(get_ssh_agent_args())
+        .args(get_user_integration_args(uid))
         .arg(format!(
             "{}@sha256:{}",
             binary_configuration.get_oci_image_name(),
@@ -264,14 +266,22 @@ fn run_docker_command(
         .exec(); // Only for UNIX
 }
 
-fn get_ssh_agent_args() -> Vec<String> {
-    match env::var("SSH_AUTH_SOCK") {
-        Ok(v) => vec![
-            "--mount".to_string(),
-            format!("type=bind,source={},target={}", v, v),
-            "--env".to_string(),
-            format!("SSH_AUTH_SOCK={}", v),
-        ],
-        Err(_) => vec![],
+fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
+    let mut ssh_agent_args: Vec<String> = vec![];
+
+    if let Ok(Some(user)) = nix::unistd::User::from_uid(uid) {
+        ssh_agent_args.push("--env".to_string());
+        ssh_agent_args.push(format!("USER={}", user.name));
+        ssh_agent_args.push("--env".to_string());
+        ssh_agent_args.push(format!("USERNAME={}", user.name));
     }
+
+    if let Ok(v) = env::var("SSH_AUTH_SOCK") {
+        ssh_agent_args.push("--mount".to_string());
+        ssh_agent_args.push(format!("type=bind,source={},target={}", v, v));
+        ssh_agent_args.push("--env".to_string());
+        ssh_agent_args.push(format!("SSH_AUTH_SOCK={}", v));
+    }
+
+    ssh_agent_args
 }
