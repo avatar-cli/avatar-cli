@@ -1,6 +1,6 @@
 # Avatar CLI
 
-[![pipeline status](https://gitlab.com/avatar-cli/avatar-cli/badges/dev/pipeline.svg)](https://gitlab.com/avatar-cli/avatar-cli/-/commits/dev)
+[![Pipeline Status]][Dev Commits] [![Latest Version]][crates.io] ![License]
 
 ## Introduction
 
@@ -88,3 +88,9 @@ Read the [contributing guidelines](CONTRIBUTING.md).
 ## License
 
 Avatar-CLI is licensed under the [GPL 3.0 license](LICENSE).
+
+[crates.io]: https://crates.io/crates/avatar-cli
+[Dev Commits]: https://gitlab.com/avatar-cli/avatar-cli/-/commits/dev
+[License]: https://img.shields.io/crates/l/avatar-cli.svg
+[Latest Version]: https://img.shields.io/crates/v/avatar-cli.svg
+[Pipeline Status]: https://gitlab.com/avatar-cli/avatar-cli/badges/dev/pipeline.svg
