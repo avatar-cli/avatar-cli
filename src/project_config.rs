@@ -586,44 +586,45 @@ fn merge_volumes(
     }
 }
 
-pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) {
-    match serde_yaml::to_vec(config) {
-        Ok(serialized_config) => {
-            if let Err(e) = write(config_filepath, &serialized_config) {
-                eprintln!(
-                    "Unknown error while persisting project config:\n\n{}\n",
-                    e.to_string()
-                );
-                exit(exitcode::IOERR)
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Unknown error while serializing project config:\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::SOFTWARE)
-        }
-    }
+pub(crate) fn save_config(config_filepath: &PathBuf, config: &ProjectConfig) -> Vec<u8> {
+    save_result_to_file(
+        config_filepath,
+        serde_yaml::to_vec(config),
+        "project config",
+    )
 }
 
 pub(crate) fn save_config_lock(
     config_lock_filepath: &PathBuf,
     config_lock: &ProjectConfigLock,
 ) -> Vec<u8> {
-    match serde_yaml::to_vec(config_lock) {
-        Ok(serialized_config_lock) => {
-            if let Err(e) = write(config_lock_filepath, &serialized_config_lock) {
+    save_result_to_file(
+        config_lock_filepath,
+        serde_yaml::to_vec(config_lock),
+        "project state",
+    )
+}
+
+fn save_result_to_file(
+    filepath: &PathBuf,
+    result: serde_yaml::Result<Vec<u8>>,
+    result_type: &str,
+) -> Vec<u8> {
+    match result {
+        Ok(serialized_bytes) => {
+            if let Err(e) = write(filepath, &serialized_bytes) {
                 eprintln!(
-                    "Unknown error while persisting project state:\n\n{}\n",
+                    "Unknown error while persisting {}:\n\n{}\n",
+                    result_type,
                     e.to_string()
                 );
             }
-            serialized_config_lock
+            serialized_bytes
         }
         Err(e) => {
             eprintln!(
-                "Unknown error while serializing project state:\n\n{}\n",
+                "Unknown error while serializing {}:\n\n{}\n",
+                result_type,
                 e.to_string()
             );
             exit(exitcode::SOFTWARE)
