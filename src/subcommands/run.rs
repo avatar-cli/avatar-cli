@@ -7,7 +7,10 @@
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::path::PathBuf;
-use std::process::{exit, Command};
+use std::{
+    process::{exit, Command},
+    str::from_utf8,
+};
 
 extern crate atty;
 extern crate dirs;
@@ -279,33 +282,59 @@ fn run_docker_command(
 }
 
 fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
-    let mut ssh_agent_args: Vec<String> = vec![];
+    let mut dynamic_args: Vec<String> = vec![];
 
     if let Ok(Some(user)) = nix::unistd::User::from_uid(uid) {
-        ssh_agent_args.push("--env".to_string());
-        ssh_agent_args.push(format!("USER={}", user.name));
-        ssh_agent_args.push("--env".to_string());
-        ssh_agent_args.push(format!("USERNAME={}", user.name));
+        dynamic_args.push("--env".to_string());
+        dynamic_args.push(format!("USER={}", user.name));
+        dynamic_args.push("--env".to_string());
+        dynamic_args.push(format!("USERNAME={}", user.name));
     }
 
     if let Ok(v) = env::var("SSH_AUTH_SOCK") {
-        ssh_agent_args.push("--mount".to_string());
-        ssh_agent_args.push(format!("type=bind,source={},target={}", v, v));
-        ssh_agent_args.push("--env".to_string());
-        ssh_agent_args.push(format!("SSH_AUTH_SOCK={}", v));
+        dynamic_args.push("--mount".to_string());
+        dynamic_args.push(format!("type=bind,source={},target={}", v, v));
+        dynamic_args.push("--env".to_string());
+        dynamic_args.push(format!("SSH_AUTH_SOCK={}", v));
     }
 
     if let Some(home_dir) = dirs::home_dir() {
         let ssh_config_dir = home_dir.join(".ssh");
 
         if ssh_config_dir.exists() && ssh_config_dir.is_dir() {
-            ssh_agent_args.push("--mount".to_string());
-            ssh_agent_args.push(format!(
+            dynamic_args.push("--mount".to_string());
+            dynamic_args.push(format!(
                 "type=bind,source={},target=/home/avatar-cli/.ssh",
                 ssh_config_dir.display()
             ));
         }
     }
 
-    ssh_agent_args
+    if let Ok(output) = Command::new("git").args(&["config", "user.name"]).output() {
+        if output.status.success() {
+            if let Ok(git_user_name) = from_utf8(&output.stdout) {
+                let trimmed_name = git_user_name.trim();
+
+                dynamic_args.push("--env".to_string());
+                dynamic_args.push(format!("GIT_AUTHOR_NAME={}", trimmed_name));
+                dynamic_args.push("--env".to_string());
+                dynamic_args.push(format!("GIT_COMMITTER_NAME={}", trimmed_name));
+            }
+        }
+    }
+
+    if let Ok(output) = Command::new("git").args(&["config", "user.email"]).output() {
+        if output.status.success() {
+            if let Ok(git_user_email) = from_utf8(&output.stdout) {
+                let trimmed_email = git_user_email.trim();
+
+                dynamic_args.push("--env".to_string());
+                dynamic_args.push(format!("GIT_AUTHOR_EMAIL={}", trimmed_email));
+                dynamic_args.push("--env".to_string());
+                dynamic_args.push(format!("GIT_COMMITTER_EMAIL={}", trimmed_email));
+            }
+        }
+    }
+
+    dynamic_args
 }
