@@ -292,10 +292,12 @@ fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
     }
 
     if let Ok(v) = env::var("SSH_AUTH_SOCK") {
-        dynamic_args.push("--mount".to_string());
-        dynamic_args.push(format!("type=bind,source={},target={}", v, v));
-        dynamic_args.push("--env".to_string());
-        dynamic_args.push(format!("SSH_AUTH_SOCK={}", v));
+        if let Some(ssh_sockets_dir) = PathBuf::from(&v).parent() {
+            dynamic_args.push("--mount".to_string());
+            dynamic_args.push(format!("type=bind,source={},target={}", ssh_sockets_dir.display(), ssh_sockets_dir.display()));
+            dynamic_args.push("--env".to_string());
+            dynamic_args.push(format!("SSH_AUTH_SOCK={}", v));
+        }
     }
 
     if let Ok(v) = env::var("GPG_AGENT_INFO") {
