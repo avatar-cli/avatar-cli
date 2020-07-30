@@ -351,8 +351,8 @@ fn push_home_config_args(home_dir: &PathBuf, config_name: &str, dynamic_args: &m
         dynamic_args.push("--mount".to_string());
         dynamic_args.push(format!(
             "type=bind,source={},target=/home/avatar-cli/{}",
-            config_name,
-            config_dir.display()
+            config_dir.display(),
+            config_name
         ));
     }
 }
