@@ -298,14 +298,35 @@ fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
         dynamic_args.push(format!("SSH_AUTH_SOCK={}", v));
     }
 
+    if let Ok(v) = env::var("GPG_AGENT_INFO") {
+        if let Some(gpg_sockets_dir) = PathBuf::from(&v).parent() {
+            dynamic_args.push("--mount".to_string());
+            dynamic_args.push(format!(
+                "type=bind,source={},target={}",
+                gpg_sockets_dir.display(),
+                gpg_sockets_dir.display()
+            ));
+            dynamic_args.push("--env".to_string());
+            dynamic_args.push(format!("GPG_AGENT_INFO={}", v));
+        }
+    }
+
     if let Some(home_dir) = dirs::home_dir() {
         let ssh_config_dir = home_dir.join(".ssh");
-
         if ssh_config_dir.exists() && ssh_config_dir.is_dir() {
             dynamic_args.push("--mount".to_string());
             dynamic_args.push(format!(
                 "type=bind,source={},target=/home/avatar-cli/.ssh",
                 ssh_config_dir.display()
+            ));
+        }
+
+        let gpg_config_dir = home_dir.join(".gnupg");
+        if gpg_config_dir.exists() && gpg_config_dir.is_dir() {
+            dynamic_args.push("--mount".to_string());
+            dynamic_args.push(format!(
+                "type=bind,source={},target=/home/avatar-cli/.gnupg",
+                gpg_config_dir.display()
             ));
         }
     }
