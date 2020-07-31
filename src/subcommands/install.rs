@@ -43,23 +43,22 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         }
     };
 
-    let config_path = project_path.join(".avatar-cli").join("avatar-cli.yml");
-    let config_lock_path = project_path.join(".avatar-cli").join("avatar-cli.lock.yml");
-    let project_state_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
-        .join("state.yml");
+    let project_data_path = project_path.join(".avatar-cli");
+    let config_path = project_data_path.join("avatar-cli.yml");
+    let config_lock_path = project_data_path.join("avatar-cli.lock.yml");
+    let volatile_path = project_data_path.join("volatile");
+    let project_state_path = volatile_path.join("state.yml");
 
     let (project_state, changed_state) =
         check_project_settings(&config_path, &config_lock_path, &project_state_path);
     let pulled_oci_images = check_oci_images_availability(&project_state);
     check_managed_volumes_availability(&project_state);
     populate_volatile_bin_dir(
-        &project_path,
+        &volatile_path,
         &project_state,
         pulled_oci_images || changed_state,
     );
-    populate_volatile_home_dir(&project_path, pulled_oci_images || changed_state);
+    populate_volatile_home_dir(&volatile_path, pulled_oci_images || changed_state);
 
     (
         project_path,
@@ -376,14 +375,11 @@ fn pull_oci_image_by_fqn(image_ref: String) {
 }
 
 fn recreate_volatile_subdir(
-    project_path: &PathBuf,
+    volatile_path: &PathBuf,
     subdir_name: &str,
     changed_state: bool,
 ) -> Option<PathBuf> {
-    let subdir_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
-        .join(subdir_name);
+    let subdir_path = volatile_path.join(subdir_name);
 
     if subdir_path.exists() {
         if !subdir_path.is_dir() {
@@ -417,11 +413,11 @@ fn recreate_volatile_subdir(
 }
 
 fn populate_volatile_bin_dir(
-    project_path: &PathBuf,
+    volatile_path: &PathBuf,
     project_state: &ProjectConfigLock,
     changed_state: bool,
 ) {
-    let bin_path = match recreate_volatile_subdir(project_path, "bin", changed_state) {
+    let bin_path = match recreate_volatile_subdir(volatile_path, "bin", changed_state) {
         Some(_bin_path) => _bin_path,
         None => return,
     };
@@ -456,8 +452,8 @@ fn populate_volatile_bin_dir(
     }
 }
 
-fn populate_volatile_home_dir(project_path: &PathBuf, changed_state: bool) {
-    recreate_volatile_subdir(project_path, "home", changed_state);
+fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
+    recreate_volatile_subdir(volatile_path, "home", changed_state);
 }
 
 fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
