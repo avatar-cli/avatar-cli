@@ -375,43 +375,56 @@ fn pull_oci_image_by_fqn(image_ref: String) {
     }
 }
 
-fn populate_volatile_bin_dir(
+fn recreate_volatile_subdir(
     project_path: &PathBuf,
-    project_state: &ProjectConfigLock,
+    subdir_name: &str,
     changed_state: bool,
-) {
-    let bin_path = project_path
+) -> Option<PathBuf> {
+    let subdir_path = project_path
         .join(".avatar-cli")
         .join("volatile")
-        .join("bin");
+        .join(subdir_name);
 
-    if bin_path.exists() {
-        if !bin_path.is_dir() {
+    if subdir_path.exists() {
+        if !subdir_path.is_dir() {
             eprintln!(
                 "The path {} must be a directory, but found something else",
-                bin_path.display()
+                subdir_path.display()
             );
             exit(exitcode::USAGE)
         }
 
         if !changed_state {
-            return;
+            return None;
         }
 
-        if let Err(e) = remove_dir_all(&bin_path) {
+        if let Err(e) = remove_dir_all(&subdir_path) {
             eprintln!(
                 "Unable to delete broken directory {}\n\n{}\n",
-                bin_path.display(),
+                subdir_path.display(),
                 e.to_string()
             );
             exit(exitcode::IOERR)
         }
     }
 
-    if create_dir_all(&bin_path).is_err() {
-        eprintln!("Unable to create directory {}", bin_path.display());
+    if create_dir_all(&subdir_path).is_err() {
+        eprintln!("Unable to create directory {}", subdir_path.display());
         exit(exitcode::CANTCREAT)
     }
+
+    Some(subdir_path)
+}
+
+fn populate_volatile_bin_dir(
+    project_path: &PathBuf,
+    project_state: &ProjectConfigLock,
+    changed_state: bool,
+) {
+    let bin_path = match recreate_volatile_subdir(project_path, "bin", changed_state) {
+        Some(_bin_path) => _bin_path,
+        None => return,
+    };
 
     let avatar_path = match env::current_exe() {
         Ok(p) => p,
@@ -444,40 +457,7 @@ fn populate_volatile_bin_dir(
 }
 
 fn populate_volatile_home_dir(project_path: &PathBuf, changed_state: bool) {
-    let home_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
-        .join("home");
-
-    if home_path.exists() {
-        if !home_path.is_dir() {
-            eprintln!(
-                "The path {} must be a directory, but found something else",
-                home_path.display()
-            );
-            exit(exitcode::USAGE)
-        }
-
-        if !changed_state {
-            return;
-        }
-
-        if let Err(e) = remove_dir_all(&home_path) {
-            eprintln!(
-                "Unable to delete broken directory {}\n\n{}\n",
-                home_path.display(),
-                e.to_string()
-            );
-            exit(exitcode::IOERR)
-        }
-    }
-
-    if !home_path.exists() {
-        if create_dir_all(&home_path).is_err() {
-            eprintln!("Unable to create directory {}", home_path.display());
-            exit(exitcode::CANTCREAT)
-        }
-    }
+    recreate_volatile_subdir(project_path, "home", changed_state);
 }
 
 fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
