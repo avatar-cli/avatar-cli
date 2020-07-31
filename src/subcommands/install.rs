@@ -390,7 +390,7 @@ fn populate_volatile_bin_dir(
 
     if bin_path.exists() {
         if !bin_path.is_dir() {
-            eprintln!("");
+            eprintln!("The path {} must be a directory, but found something else", bin_path.display());
             exit(exitcode::USAGE)
         }
 
