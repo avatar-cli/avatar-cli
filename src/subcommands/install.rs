@@ -59,6 +59,7 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         &project_state,
         pulled_oci_images || changed_state,
     );
+    populate_volatile_home_dir(&project_path, pulled_oci_images || changed_state);
 
     (
         project_path,
@@ -383,14 +384,13 @@ fn populate_volatile_bin_dir(
         .join(".avatar-cli")
         .join("volatile")
         .join("bin");
-    let home_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
-        .join("home");
 
     if bin_path.exists() {
         if !bin_path.is_dir() {
-            eprintln!("The path {} must be a directory, but found something else", bin_path.display());
+            eprintln!(
+                "The path {} must be a directory, but found something else",
+                bin_path.display()
+            );
             exit(exitcode::USAGE)
         }
 
@@ -400,7 +400,7 @@ fn populate_volatile_bin_dir(
 
         if let Err(e) = remove_dir_all(&bin_path) {
             eprintln!(
-                "Unable to delete broken bin directory {}\n\n{}\n",
+                "Unable to delete broken directory {}\n\n{}\n",
                 bin_path.display(),
                 e.to_string()
             );
@@ -411,12 +411,6 @@ fn populate_volatile_bin_dir(
     if create_dir_all(&bin_path).is_err() {
         eprintln!("Unable to create directory {}", bin_path.display());
         exit(exitcode::CANTCREAT)
-    }
-    if !home_path.exists() {
-        if create_dir_all(&home_path).is_err() {
-            eprintln!("Unable to create directory {}", home_path.display());
-            exit(exitcode::CANTCREAT)
-        }
     }
 
     let avatar_path = match env::current_exe() {
@@ -444,6 +438,43 @@ fn populate_volatile_bin_dir(
     for binary_name in project_state.get_binary_names() {
         if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
             eprintln!("Unable to create symlink to {} binary", binary_name);
+            exit(exitcode::CANTCREAT)
+        }
+    }
+}
+
+fn populate_volatile_home_dir(project_path: &PathBuf, changed_state: bool) {
+    let home_path = project_path
+        .join(".avatar-cli")
+        .join("volatile")
+        .join("home");
+
+    if home_path.exists() {
+        if !home_path.is_dir() {
+            eprintln!(
+                "The path {} must be a directory, but found something else",
+                home_path.display()
+            );
+            exit(exitcode::USAGE)
+        }
+
+        if !changed_state {
+            return;
+        }
+
+        if let Err(e) = remove_dir_all(&home_path) {
+            eprintln!(
+                "Unable to delete broken directory {}\n\n{}\n",
+                home_path.display(),
+                e.to_string()
+            );
+            exit(exitcode::IOERR)
+        }
+    }
+
+    if !home_path.exists() {
+        if create_dir_all(&home_path).is_err() {
+            eprintln!("Unable to create directory {}", home_path.display());
             exit(exitcode::CANTCREAT)
         }
     }
