@@ -128,7 +128,7 @@ fn check_etc_passwd_files(
                     "--label",
                     &project_filter,
                     "--label",
-                    &format!("avatar_cli_type=install"),
+                    "avatar_cli_type=install",
                     &image_ref,
                 ])
                 .output()
@@ -175,7 +175,6 @@ fn check_etc_passwd_files(
             let mut found_csh = false;
             let mut found_dash = false;
             let mut found_ksh = false;
-            let mut found_sh = false;
             let mut found_zsh = false;
             for file_name in container_files_list.lines() {
                 match file_name.trim() {
@@ -184,7 +183,6 @@ fn check_etc_passwd_files(
                     "bin/csh" => found_csh = true,
                     "bin/dash" => found_dash = true,
                     "bin/ksh" => found_ksh = true,
-                    "bin/sh" => found_sh = true,
                     "bin/zsh" => found_zsh = true,
                     _ => {}
                 }
@@ -199,9 +197,7 @@ fn check_etc_passwd_files(
                 "/bin/ksh"
             } else if found_csh {
                 "/bin/csh"
-            } else if found_sh {
-                "/bin/sh"
-            } else {
+            } else { // it includes found_sh
                 "/bin/sh"
             };
 
@@ -247,7 +243,7 @@ fn check_etc_passwd_files(
                     let trimmed_user_line = user_line.trim();
                     let mut user_line_parts = trimmed_user_line.split(':');
                     if let Some(passwd_uid) = user_line_parts.nth(2) {
-                        if passwd_uid == &uid.to_string() {
+                        if passwd_uid == uid.to_string() {
                             let passwd_shell = match user_line_parts.last() {
                                 Some(_passwd_shell) => _passwd_shell,
                                 None => inferred_passwd_shell,
