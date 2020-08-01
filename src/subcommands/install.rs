@@ -129,13 +129,16 @@ fn check_etc_passwd_files(
                     &project_filter,
                     "--label",
                     &format!("avatar_cli_type=install"),
-                    &image_ref
+                    &image_ref,
                 ])
                 .output()
             {
                 Ok(output) => {
                     if !output.status.success() {
-                        eprintln!("Unable to create temporary install container\n\n{}", from_utf8(&output.stderr).unwrap());
+                        eprintln!(
+                            "Unable to create temporary install container\n\n{}",
+                            from_utf8(&output.stderr).unwrap()
+                        );
                         errors = true;
                         break;
                     }

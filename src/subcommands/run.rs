@@ -231,6 +231,12 @@ fn run_docker_command(
         .join("volatile")
         .join("home");
 
+    let image_ref = format!(
+        "{}@sha256:{}",
+        binary_configuration.get_oci_image_name(),
+        binary_configuration.get_oci_image_hash()
+    );
+
     Command::new("docker")
         .args(&["run", "--rm", "--init"])
         .args(interactive_options)
@@ -265,18 +271,18 @@ fn run_docker_command(
             "HOME=/home/avatar-cli",
         ])
         .args(dynamic_mounts)
-        .args(get_user_integration_args(uid))
-        .arg(format!(
-            "{}@sha256:{}",
-            binary_configuration.get_oci_image_name(),
-            binary_configuration.get_oci_image_hash()
-        ))
+        .args(get_user_integration_args(uid, &image_ref, project_path))
+        .arg(&image_ref)
         .arg(binary_configuration.get_path())
         .args(env::args().skip(skip_args))
         .exec(); // Only for UNIX
 }
 
-fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
+fn get_user_integration_args(
+    uid: nix::unistd::Uid,
+    image_ref: &str,
+    project_path: &PathBuf,
+) -> Vec<String> {
     let mut dynamic_args: Vec<String> = vec![];
 
     if let Ok(Some(user)) = nix::unistd::User::from_uid(uid) {
@@ -294,6 +300,28 @@ fn get_user_integration_args(uid: nix::unistd::Uid) -> Vec<String> {
     if let Some(home_dir) = dirs::home_dir() {
         push_home_config_args(&home_dir, ".ssh", &mut dynamic_args);
         push_home_config_args(&home_dir, ".gnupg", &mut dynamic_args);
+    }
+
+    let passwd_path = project_path
+        .join(".avatar-cli")
+        .join("volatile")
+        .join("images")
+        .join(image_ref)
+        .join("passwd");
+    if passwd_path.exists() {
+        if !passwd_path.is_file() {
+            eprintln!(
+                "The path {} must point to a regular file, found something else",
+                passwd_path.display()
+            );
+            exit(exitcode::USAGE)
+        }
+
+        dynamic_args.push("--mount".to_string());
+        dynamic_args.push(format!(
+            "type=bind,source={},target=/etc/passwd",
+            passwd_path.display()
+        ));
     }
 
     if let Ok(output) = Command::new("git").args(&["config", "user.name"]).output() {
