@@ -7,8 +7,6 @@
 use std::fs::{create_dir, read, remove_dir_all, write};
 use std::{path::PathBuf, process::exit};
 
-extern crate exitcode;
-
 use crate::{
     directories::get_project_path,
     project_config::{save_config, ProjectConfig},

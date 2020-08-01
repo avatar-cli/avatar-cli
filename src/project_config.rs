@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::vec::Vec;
 
-extern crate ring;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use ring::digest::{digest, Digest, SHA256};
 use serde::{Deserialize, Serialize};
@@ -205,7 +204,7 @@ pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     project_config_hash: Vec<u8>,
     project_internal_id: String,
-    images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image_hash
+    images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image config & hash
     binaries: BTreeMap<String, ImageBinaryConfigLock>,
 }
 

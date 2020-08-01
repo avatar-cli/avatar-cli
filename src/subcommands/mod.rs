@@ -6,7 +6,6 @@
 
 use std::{env, path::PathBuf, process::exit};
 
-extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
 pub(crate) mod init;

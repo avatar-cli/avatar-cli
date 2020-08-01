@@ -7,13 +7,14 @@
 use std::{
     collections::BTreeMap,
     env,
-    fs::{copy, create_dir_all, remove_dir_all},
+    fs::{copy, create_dir_all, remove_dir_all, write},
     os::unix::fs::symlink,
     path::PathBuf,
     process::{exit, Command},
     str::from_utf8,
 };
 
+use duct::cmd;
 use ring::digest::{digest, Digest, SHA256};
 
 use crate::{
@@ -59,6 +60,11 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         pulled_oci_images || changed_state,
     );
     populate_volatile_home_dir(&volatile_path, pulled_oci_images || changed_state);
+    check_etc_passwd_files(
+        &volatile_path,
+        &project_state,
+        pulled_oci_images || changed_state,
+    );
 
     (
         project_path,
@@ -67,6 +73,239 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         project_state_path,
         project_state,
     )
+}
+
+fn check_etc_passwd_files(
+    volatile_path: &PathBuf,
+    project_state: &ProjectConfigLock,
+    changed_state: bool,
+) {
+    if which::which("tar").is_err() {
+        eprintln!("WARNING: tar tool is not available, and passwd files won't be generated to improve integration with ssh-agent");
+        return;
+    }
+
+    let images_path = match recreate_volatile_subdir(volatile_path, "images", changed_state) {
+        Some(_images_path) => _images_path,
+        None => return,
+    };
+
+    let project_internal_id = project_state.get_project_internal_id();
+    let project_filter = format!("avatar_cli_project={}", project_internal_id);
+
+    let uid = nix::unistd::getuid();
+    let (username, gid) = match nix::unistd::User::from_uid(uid) {
+        Ok(Some(user)) => (user.name, user.gid),
+        _ => {
+            eprintln!("Unable to get current user name");
+            exit(exitcode::OSERR)
+        }
+    };
+
+    let mut errors = false;
+    for (image_name, image_tags) in project_state.get_images() {
+        for (image_tag, image_config) in image_tags {
+            let image_hash = image_config.get_hash();
+            let image_ref = format!("{}@sha256:{}", image_name, image_hash);
+            let image_config_path = images_path.join(&image_ref);
+
+            if create_dir_all(&image_config_path).is_err() {
+                eprintln!("Unable to create directory {}", image_config_path.display());
+                exit(exitcode::CANTCREAT)
+            }
+
+            let install_container_name = format!(
+                "{}_{}_{}_{}_passwd",
+                project_internal_id, image_name, image_tag, image_hash
+            );
+            match Command::new("docker")
+                .args(&[
+                    "create",
+                    "--name",
+                    &install_container_name,
+                    "--label",
+                    "avatar_cli",
+                    "--label",
+                    &project_filter,
+                    "--label",
+                    &format!("avatar_cli_type=install"),
+                    &image_ref
+                ])
+                .output()
+            {
+                Ok(output) => {
+                    if !output.status.success() {
+                        eprintln!("Unable to create temporary install container\n\n{}", from_utf8(&output.stderr).unwrap());
+                        errors = true;
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Unable to create temporary install container\n\n{}\n",
+                        e.to_string()
+                    );
+                    errors = true;
+                    break;
+                }
+            }
+
+            let container_files_list = match cmd!("docker", "export", &install_container_name)
+                .pipe(cmd!("tar", "t"))
+                .read()
+            {
+                Ok(output) => output,
+                Err(e) => {
+                    eprintln!(
+                        "Unable to list contents of container {}\n\n{}\n",
+                        &install_container_name,
+                        e.to_string()
+                    );
+                    errors = true;
+                    break;
+                }
+            };
+
+            // TODO: fish, and others
+            let mut found_passwd = false;
+            let mut found_bash = false;
+            let mut found_csh = false;
+            let mut found_dash = false;
+            let mut found_ksh = false;
+            let mut found_sh = false;
+            let mut found_zsh = false;
+            for file_name in container_files_list.lines() {
+                match file_name.trim() {
+                    "etc/passwd" => found_passwd = true,
+                    "bin/bash" => found_bash = true,
+                    "bin/csh" => found_csh = true,
+                    "bin/dash" => found_dash = true,
+                    "bin/ksh" => found_ksh = true,
+                    "bin/sh" => found_sh = true,
+                    "bin/zsh" => found_zsh = true,
+                    _ => {}
+                }
+            }
+            let inferred_passwd_shell = if found_bash {
+                "/bin/bash"
+            } else if found_zsh {
+                "/bin/zsh"
+            } else if found_dash {
+                "/bin/dash"
+            } else if found_ksh {
+                "/bin/ksh"
+            } else if found_csh {
+                "/bin/csh"
+            } else if found_sh {
+                "/bin/sh"
+            } else {
+                "/bin/sh"
+            };
+
+            let local_etc_passwd_path = image_config_path.join("passwd");
+            if !found_passwd {
+                if let Err(e) = write(
+                    &local_etc_passwd_path,
+                    format!(
+                        "{}:x:{}:{}::/home/avatar-cli:{}\n",
+                        username, uid, gid, inferred_passwd_shell
+                    )
+                    .as_bytes(),
+                ) {
+                    eprintln!(
+                        "Unable to create custom passwd file for {}\n\n{}\n",
+                        &image_ref,
+                        e.to_string()
+                    );
+                    errors = true;
+                    break;
+                }
+            } else {
+                let passwd_src_contents = match cmd!("docker", "export", &install_container_name)
+                    .pipe(cmd!("tar", "--extract", "-O", "etc/passwd"))
+                    .read()
+                {
+                    Ok(_contents) => _contents,
+                    Err(e) => {
+                        eprintln!(
+                            "Unable to export passwd file from {} image\n\n{}\n",
+                            image_ref,
+                            e.to_string()
+                        );
+                        errors = true;
+                        break;
+                    }
+                };
+
+                let mut found_user_line = false;
+                let mut passwd_dst_contents = String::with_capacity(passwd_src_contents.len());
+
+                for user_line in passwd_src_contents.lines() {
+                    let trimmed_user_line = user_line.trim();
+                    let mut user_line_parts = trimmed_user_line.split(':');
+                    if let Some(passwd_uid) = user_line_parts.nth(2) {
+                        if passwd_uid == &uid.to_string() {
+                            let passwd_shell = match user_line_parts.last() {
+                                Some(_passwd_shell) => _passwd_shell,
+                                None => inferred_passwd_shell,
+                            };
+
+                            found_user_line = true;
+                            passwd_dst_contents.push_str(&format!(
+                                "{}:x:{}:{}::/home/avatar-cli:{}\n",
+                                username, uid, gid, passwd_shell
+                            ))
+                        } else {
+                            passwd_dst_contents.push_str(trimmed_user_line);
+                            passwd_dst_contents.push('\n')
+                        }
+                    } else {
+                        eprintln!("Unable to process exported passwd file from {} image, found corrupted line:\n\n{}\n", image_ref, user_line);
+                        errors = true;
+                        break;
+                    }
+                }
+                if !found_user_line {
+                    passwd_dst_contents.push_str(&format!(
+                        "{}:x:{}:{}::/home/avatar-cli:{}\n",
+                        username, uid, gid, inferred_passwd_shell
+                    ))
+                }
+                if let Err(e) = write(&local_etc_passwd_path, passwd_dst_contents.as_bytes()) {
+                    eprintln!(
+                        "Unable to create custom passwd file for {}\n\n{}\n",
+                        &image_ref,
+                        e.to_string()
+                    );
+                    errors = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if let Err(e) = Command::new("docker")
+        .args(&[
+            "container",
+            "prune",
+            "--force",
+            "--filter",
+            &format!("label={}", project_filter),
+            "--filter",
+            "label=avatar_cli_type=install",
+        ])
+        .output()
+    {
+        eprintln!(
+            "Unable to prune containers generated during install step\n\n{}\n",
+            e.to_string()
+        );
+        errors = true;
+    }
+
+    if errors {
+        exit(exitcode::IOERR)
+    }
 }
 
 fn check_project_settings(

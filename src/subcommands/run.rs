@@ -12,11 +12,6 @@ use std::{
     str::from_utf8,
 };
 
-extern crate atty;
-extern crate dirs;
-extern crate exitcode;
-extern crate nix;
-extern crate which;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};

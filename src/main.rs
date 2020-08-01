@@ -4,10 +4,6 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
-extern crate atty;
-extern crate exitcode;
-extern crate which;
-
 mod avatar_env;
 mod directories;
 mod project_config;

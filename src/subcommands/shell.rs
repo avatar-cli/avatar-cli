@@ -8,8 +8,6 @@ use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
 use std::process::{exit, Command};
 
-extern crate exitcode;
-extern crate rand;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{
