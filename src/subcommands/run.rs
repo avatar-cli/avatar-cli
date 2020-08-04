@@ -291,6 +291,11 @@ fn get_user_integration_args(
 ) -> Vec<String> {
     let mut dynamic_args: Vec<String> = vec![];
 
+    if let Ok(v) = env::var("TERM") {
+        dynamic_args.push("--env".to_string());
+        dynamic_args.push(format!("TERM={}", v));
+    }
+
     if let Ok(Some(user)) = nix::unistd::User::from_uid(uid) {
         dynamic_args.push("--env".to_string());
         dynamic_args.push(format!("USER={}", user.name));

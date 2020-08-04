@@ -302,22 +302,26 @@ fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
     for (_, binary_config) in project_state.get_binaries_configs() {
         if let Some(run_config) = binary_config.get_run_config() {
             if let Some(volume_configs) = run_config.get_volumes() {
-                volume_configs
-                    .iter()
-                    .for_each(check_managed_volume_existence);
+                volume_configs.iter().for_each(|vc| {
+                    check_managed_volume_existence(vc, project_state.get_project_internal_id())
+                });
             }
         }
     }
 }
 
-fn check_managed_volume_existence(volume_config: &VolumeConfigLock) {
+fn check_managed_volume_existence(volume_config: &VolumeConfigLock, project_internal_id: &str) {
     match Command::new("docker")
         .args(&["volume", "inspect", volume_config.get_name()])
         .output()
     {
         Ok(output) => {
             if !output.status.success() {
-                create_volume(volume_config.get_name(), volume_config.get_container_path());
+                create_volume(
+                    volume_config.get_name(),
+                    volume_config.get_container_path(),
+                    project_internal_id,
+                );
             }
         }
         Err(e) => {
@@ -469,9 +473,19 @@ fn compile_image_configs(
     )
 }
 
-fn create_volume(volume_name: &str, container_path: &PathBuf) {
+fn create_volume(volume_name: &str, container_path: &PathBuf, project_internal_id: &str) {
+    let project_filter = format!("avatar_cli_project={}", project_internal_id);
+
     match Command::new("docker")
-        .args(&["volume", "create", volume_name])
+        .args(&[
+            "volume",
+            "create",
+            volume_name,
+            "--label",
+            "avatar_cli",
+            "--label",
+            &project_filter,
+        ])
         .output()
     {
         Ok(output) => {
@@ -552,7 +566,10 @@ fn get_binaries_settings(
                                 ImageBinaryConfigLock::new(
                                     image_name.clone(),
                                     image_config.get_hash().clone(),
-                                    binary_config.get_path().clone().unwrap_or(PathBuf::from(binary_name)),
+                                    binary_config
+                                        .get_path()
+                                        .clone()
+                                        .unwrap_or(PathBuf::from(binary_name)),
                                     merge_run_configs(
                                         image_config.get_run_config(),
                                         binary_config.get_run_config(),
