@@ -1,5 +1,5 @@
 #!/bin/sh
 
-if [ -n "$AVATAR_CLI_SESSION_TOKEN" ] && [ -t 1 ]; then
+if [ -n "${AVATAR_CLI_SESSION_TOKEN}" ] && [ -t 1 ] && [ "${hookName}" != "pre-push" ]; then
   exec < /dev/tty ;
 fi
