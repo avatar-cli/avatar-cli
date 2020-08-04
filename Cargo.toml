@@ -23,6 +23,10 @@ branch = "main"
 [badges.maintenance]
 status = "experimental"
 
+[[bin]]
+name = "avatar"
+path = "src/main.rs"
+
 [dependencies]
 atty = "0.2"
 clap = "2.33.1"
