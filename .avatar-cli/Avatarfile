@@ -1,35 +1,29 @@
 ---
-version: '0.6.0'
+version: '0.15.0'
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
     14-buster:
-
       runConfig:
         env:
-          A_GLOBAL_VAR: hello
-          THEANSWERTOEVERYTHING: 55
+          npm_config_cache: /caches/.npm
         envFromHost:
           - NPM_TOKEN
+        volumes:
+          "/caches/.npm": {}
 
       binaries:
         node:
           path: node
-          runConfig:
-            env:
-              THEANSWERTOEVERYTHING: 42
-            envFromHost:
-              - NPM_TOKEN
-            volumes:
-              "/caches": {}
         npm:
           path: npm
         npx:
           path: npx
         yarn:
           path: yarn
-        customsh:
-          path: sh
-          runConfig:
-            volumes:
-              "/pathespecial": {}
+
+  rust:
+    1.45-stretch:
+      binaries:
+        cargo:
+          path: cargo
