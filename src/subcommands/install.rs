@@ -21,7 +21,7 @@ use crate::{
     avatar_env::SESSION_TOKEN,
     directories::{
         get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME, CONFIG_DIR_NAME,
-        CONTAINER_HOME_PATH, VOLATILE_DIR_NAME, STATEFILE_NAME,
+        CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
     },
     project_config::{
         get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
@@ -30,52 +30,40 @@ use crate::{
     },
 };
 
-pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, ProjectConfigLock) {
-    if let Ok(session_token) = env::var(SESSION_TOKEN) {
-        eprintln!(
-        "You are already in an Avatar CLI session (with token '{}').\nIf the environment changed, consider typing 'exit' and trying again.",
-        session_token
-    );
-        exit(exitcode::USAGE)
-    }
-
-    let project_path = match get_project_path() {
-        Some(p) => p,
-        None => {
-            eprintln!("The command was not executed inside an Avatar CLI project directory");
-            exit(exitcode::USAGE)
+fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
+    match Command::new("docker")
+        .args(&[
+            "run",
+            "--rm",
+            "--volume",
+            &format!("{}:{}", volume_name, container_path.display()),
+            "alpine:3.12",
+            "sh",
+            "-c",
+            &format!(
+                "chown -R {}:{} {}",
+                nix::unistd::getuid(),
+                nix::unistd::getgid(),
+                container_path.display()
+            ),
+        ])
+        .output()
+    {
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Unable to change permissions for volume {}", volume_name);
+                exit(exitcode::SOFTWARE);
+            }
         }
-    };
-
-    let project_data_path = project_path.join(CONFIG_DIR_NAME);
-    let config_path = project_data_path.join(AVATARFILE_NAME);
-    let config_lock_path = project_data_path.join(AVATARFILE_LOCK_NAME);
-    let volatile_path = project_data_path.join(VOLATILE_DIR_NAME);
-    let project_state_path = volatile_path.join(STATEFILE_NAME);
-
-    let (project_state, changed_state) =
-        check_project_settings(&config_path, &config_lock_path, &project_state_path);
-    let pulled_oci_images = check_oci_images_availability(&project_state);
-    check_managed_volumes_availability(&project_state);
-    populate_volatile_bin_dir(
-        &volatile_path,
-        &project_state,
-        pulled_oci_images || changed_state,
-    );
-    populate_volatile_home_dir(&volatile_path, pulled_oci_images || changed_state);
-    check_etc_passwd_files(
-        &volatile_path,
-        &project_state,
-        pulled_oci_images || changed_state,
-    );
-
-    (
-        project_path,
-        config_path,
-        config_lock_path,
-        project_state_path,
-        project_state,
-    )
+        Err(e) => {
+            eprintln!(
+                "Unable to change permissions for volume {}\n\n{}\n",
+                volume_name,
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    }
 }
 
 fn check_etc_passwd_files(
@@ -311,6 +299,85 @@ fn check_etc_passwd_files(
     }
 }
 
+fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
+    for (_, binary_config) in project_state.get_binaries_configs() {
+        if let Some(run_config) = binary_config.get_run_config() {
+            if let Some(volume_configs) = run_config.get_volumes() {
+                volume_configs
+                    .iter()
+                    .for_each(check_managed_volume_existence);
+            }
+        }
+    }
+}
+
+fn check_managed_volume_existence(volume_config: &VolumeConfigLock) {
+    match Command::new("docker")
+        .args(&["volume", "inspect", volume_config.get_name()])
+        .output()
+    {
+        Ok(output) => {
+            if !output.status.success() {
+                create_volume(volume_config.get_name(), volume_config.get_container_path());
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Unable to inspect volume {}\n\n{}\n",
+                volume_config.get_name(),
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    }
+}
+
+fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
+    let images = project_state.get_images();
+
+    if which::which("docker").is_err() {
+        eprintln!("docker client is not available");
+        exit(exitcode::UNAVAILABLE)
+    }
+
+    let mut changed_state = false;
+
+    for (image_name, image_tags) in images.iter() {
+        for (_, image_config) in image_tags.iter() {
+            let inspect_output = Command::new("docker")
+                .args(&[
+                    "inspect",
+                    &format!("{}@sha256:{}", image_name, image_config.get_hash()),
+                ])
+                .output();
+
+            match inspect_output {
+                Ok(output) => {
+                    if !output.status.success() {
+                        pull_oci_image_by_fqn(format!(
+                            "{}@sha256:{}",
+                            image_name,
+                            image_config.get_hash()
+                        ));
+                        changed_state = true;
+                    }
+                }
+                Err(err) => {
+                    eprintln!(
+                        "Unable to use docker to inspect image {}@sha256:{}.\n\n{}\n",
+                        image_name,
+                        image_config.get_hash(),
+                        err.to_string()
+                    );
+                    exit(exitcode::OSERR)
+                }
+            }
+        }
+    }
+
+    changed_state
+}
+
 fn check_project_settings(
     config_path: &PathBuf,
     config_lock_path: &PathBuf,
@@ -379,44 +446,6 @@ fn check_project_settings(
     (project_state, changed_state)
 }
 
-fn generate_config_lock(
-    config_lock_path: &PathBuf,
-    config: &ProjectConfig,
-    config_hash: &Digest,
-) -> (ProjectConfigLock, Digest) {
-    let image_configs = get_image_compiled_configs(config);
-    let binaries_settings = get_binaries_settings(config, &image_configs);
-
-    let config_lock = ProjectConfigLock::new(
-        Vec::<u8>::from(config_hash.as_ref()),
-        config.get_project_internal_id().clone(),
-        image_configs,
-        binaries_settings,
-    );
-
-    let config_lock_bytes = save_config_lock(config_lock_path, &config_lock);
-    (config_lock, digest(&SHA256, &config_lock_bytes))
-}
-
-fn update_project_state(
-    project_state_path: &PathBuf,
-    mut project_state: ProjectConfigLock,
-    config_lock_hash: &[u8],
-) -> ProjectConfigLock {
-    project_state = project_state.update_project_config_hash(config_lock_hash);
-    save_config_lock(project_state_path, &project_state);
-    project_state
-}
-
-fn get_image_compiled_configs(
-    config: &ProjectConfig,
-) -> BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
-    match config.get_images() {
-        Some(images) => images.iter().map(compile_image_configs).collect(),
-        None => BTreeMap::new(),
-    }
-}
-
 fn compile_image_configs(
     (image_name, image_tags): (&String, &BTreeMap<String, OCIImageConfig>),
 ) -> (String, BTreeMap<String, OCIImageConfigLock>) {
@@ -441,60 +470,47 @@ fn compile_image_configs(
     )
 }
 
-fn get_image_config_by_tag(
-    (image_tag, image_fqn, run_config): (&String, String, Option<OCIContainerRunConfig>),
-) -> (String, OCIImageConfigLock) {
+fn create_volume(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
-        .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
+        .args(&["volume", "create", volume_name])
         .output()
     {
-        Ok(output) => match output.status.success() {
-            true => match from_utf8(&output.stdout) {
-                Ok(stdout) => match stdout.trim().split(':').nth(1) {
-                    Some(hash) => (
-                        image_tag.clone(),
-                        OCIImageConfigLock::new(hash.to_string(), run_config),
-                    ),
-                    None => {
-                        eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
-                        exit(exitcode::PROTOCOL)
-                    }
-                },
-                Err(e) => {
-                    eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output.\n\n{}\n", image_fqn, e.to_string());
-                    exit(exitcode::PROTOCOL)
-                }
-            },
-            false => match Command::new("docker")
-                .args(&["image", "pull", &image_fqn])
-                .status()
-            {
-                Ok(status) => match status.success() {
-                    true => get_image_config_by_tag((image_tag, image_fqn, run_config)),
-                    false => {
-                        eprintln!("Unable to pull OCI image {}", image_fqn);
-                        exit(exitcode::UNAVAILABLE)
-                    }
-                },
-                Err(e) => {
-                    eprintln!(
-                        "Unknow error while trying to pull OCI image {}:\n\n{}\n",
-                        image_fqn,
-                        e.to_string()
-                    );
-                    exit(exitcode::OSERR)
-                }
-            },
-        },
+        Ok(output) => {
+            if !output.status.success() {
+                eprintln!("Unable to create volume {}", volume_name);
+                exit(exitcode::SOFTWARE);
+            }
+
+            change_volume_permissions(volume_name, container_path)
+        }
         Err(e) => {
             eprintln!(
-                "Unknow error while trying to inspect OCI image {}:\n\n{}\n",
-                image_fqn,
+                "Unable to create volume {}\n\n{}\n",
+                volume_name,
                 e.to_string()
             );
             exit(exitcode::OSERR)
         }
     }
+}
+
+fn generate_config_lock(
+    config_lock_path: &PathBuf,
+    config: &ProjectConfig,
+    config_hash: &Digest,
+) -> (ProjectConfigLock, Digest) {
+    let image_configs = get_image_compiled_configs(config);
+    let binaries_settings = get_binaries_settings(config, &image_configs);
+
+    let config_lock = ProjectConfigLock::new(
+        Vec::<u8>::from(config_hash.as_ref()),
+        config.get_project_internal_id().clone(),
+        image_configs,
+        binaries_settings,
+    );
+
+    let config_lock_bytes = save_config_lock(config_lock_path, &config_lock);
+    (config_lock, digest(&SHA256, &config_lock_bytes))
 }
 
 fn get_binaries_settings(
@@ -558,50 +574,161 @@ fn get_binaries_settings(
     dst_binaries
 }
 
-fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
-    let images = project_state.get_images();
-
-    if which::which("docker").is_err() {
-        eprintln!("docker client is not available");
-        exit(exitcode::UNAVAILABLE)
+fn get_image_compiled_configs(
+    config: &ProjectConfig,
+) -> BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
+    match config.get_images() {
+        Some(images) => images.iter().map(compile_image_configs).collect(),
+        None => BTreeMap::new(),
     }
+}
 
-    let mut changed_state = false;
-
-    for (image_name, image_tags) in images.iter() {
-        for (_, image_config) in image_tags.iter() {
-            let inspect_output = Command::new("docker")
-                .args(&[
-                    "inspect",
-                    &format!("{}@sha256:{}", image_name, image_config.get_hash()),
-                ])
-                .output();
-
-            match inspect_output {
-                Ok(output) => {
-                    if !output.status.success() {
-                        pull_oci_image_by_fqn(format!(
-                            "{}@sha256:{}",
-                            image_name,
-                            image_config.get_hash()
-                        ));
-                        changed_state = true;
+fn get_image_config_by_tag(
+    (image_tag, image_fqn, run_config): (&String, String, Option<OCIContainerRunConfig>),
+) -> (String, OCIImageConfigLock) {
+    match Command::new("docker")
+        .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
+        .output()
+    {
+        Ok(output) => match output.status.success() {
+            true => match from_utf8(&output.stdout) {
+                Ok(stdout) => match stdout.trim().split(':').nth(1) {
+                    Some(hash) => (
+                        image_tag.clone(),
+                        OCIImageConfigLock::new(hash.to_string(), run_config),
+                    ),
+                    None => {
+                        eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
+                        exit(exitcode::PROTOCOL)
                     }
+                },
+                Err(e) => {
+                    eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output.\n\n{}\n", image_fqn, e.to_string());
+                    exit(exitcode::PROTOCOL)
                 }
-                Err(err) => {
+            },
+            false => match Command::new("docker")
+                .args(&["image", "pull", &image_fqn])
+                .status()
+            {
+                Ok(status) => match status.success() {
+                    true => get_image_config_by_tag((image_tag, image_fqn, run_config)),
+                    false => {
+                        eprintln!("Unable to pull OCI image {}", image_fqn);
+                        exit(exitcode::UNAVAILABLE)
+                    }
+                },
+                Err(e) => {
                     eprintln!(
-                        "Unable to use docker to inspect image {}@sha256:{}.\n\n{}\n",
-                        image_name,
-                        image_config.get_hash(),
-                        err.to_string()
+                        "Unknow error while trying to pull OCI image {}:\n\n{}\n",
+                        image_fqn,
+                        e.to_string()
                     );
                     exit(exitcode::OSERR)
                 }
-            }
+            },
+        },
+        Err(e) => {
+            eprintln!(
+                "Unknow error while trying to inspect OCI image {}:\n\n{}\n",
+                image_fqn,
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
         }
     }
+}
 
-    changed_state
+pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, ProjectConfigLock) {
+    if let Ok(session_token) = env::var(SESSION_TOKEN) {
+        eprintln!(
+        "You are already in an Avatar CLI session (with token '{}').\nIf the environment changed, consider typing 'exit' and trying again.",
+        session_token
+    );
+        exit(exitcode::USAGE)
+    }
+
+    let project_path = match get_project_path() {
+        Some(p) => p,
+        None => {
+            eprintln!("The command was not executed inside an Avatar CLI project directory");
+            exit(exitcode::USAGE)
+        }
+    };
+
+    let project_data_path = project_path.join(CONFIG_DIR_NAME);
+    let config_path = project_data_path.join(AVATARFILE_NAME);
+    let config_lock_path = project_data_path.join(AVATARFILE_LOCK_NAME);
+    let volatile_path = project_data_path.join(VOLATILE_DIR_NAME);
+    let project_state_path = volatile_path.join(STATEFILE_NAME);
+
+    let (project_state, changed_state) =
+        check_project_settings(&config_path, &config_lock_path, &project_state_path);
+    let pulled_oci_images = check_oci_images_availability(&project_state);
+    check_managed_volumes_availability(&project_state);
+    populate_volatile_bin_dir(
+        &volatile_path,
+        &project_state,
+        pulled_oci_images || changed_state,
+    );
+    populate_volatile_home_dir(&volatile_path, pulled_oci_images || changed_state);
+    check_etc_passwd_files(
+        &volatile_path,
+        &project_state,
+        pulled_oci_images || changed_state,
+    );
+
+    (
+        project_path,
+        config_path,
+        config_lock_path,
+        project_state_path,
+        project_state,
+    )
+}
+
+fn populate_volatile_bin_dir(
+    volatile_path: &PathBuf,
+    project_state: &ProjectConfigLock,
+    changed_state: bool,
+) {
+    let bin_path = match recreate_volatile_subdir(volatile_path, "bin", changed_state) {
+        Some(_bin_path) => _bin_path,
+        None => return,
+    };
+
+    let avatar_path = match env::current_exe() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "Unable to retrieve avatar's binary path.\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    };
+
+    let managed_avatar_path = bin_path.join("avatar");
+
+    if let Err(e) = copy(&avatar_path, &managed_avatar_path) {
+        eprintln!(
+            "Unable to copy avatar binary to {}\n\n{}\n",
+            bin_path.display(),
+            e.to_string()
+        );
+        exit(exitcode::IOERR)
+    }
+
+    for binary_name in project_state.get_binary_names() {
+        if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
+            eprintln!("Unable to create symlink to {} binary", binary_name);
+            exit(exitcode::CANTCREAT)
+        }
+    }
+}
+
+fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
+    recreate_volatile_subdir(volatile_path, "home", changed_state);
 }
 
 fn pull_oci_image_by_fqn(image_ref: String) {
@@ -654,139 +781,12 @@ fn recreate_volatile_subdir(
     Some(subdir_path)
 }
 
-fn populate_volatile_bin_dir(
-    volatile_path: &PathBuf,
-    project_state: &ProjectConfigLock,
-    changed_state: bool,
-) {
-    let bin_path = match recreate_volatile_subdir(volatile_path, "bin", changed_state) {
-        Some(_bin_path) => _bin_path,
-        None => return,
-    };
-
-    let avatar_path = match env::current_exe() {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!(
-                "Unable to retrieve avatar's binary path.\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    };
-
-    let managed_avatar_path = bin_path.join("avatar");
-
-    if let Err(e) = copy(&avatar_path, &managed_avatar_path) {
-        eprintln!(
-            "Unable to copy avatar binary to {}\n\n{}\n",
-            bin_path.display(),
-            e.to_string()
-        );
-        exit(exitcode::IOERR)
-    }
-
-    for binary_name in project_state.get_binary_names() {
-        if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
-            eprintln!("Unable to create symlink to {} binary", binary_name);
-            exit(exitcode::CANTCREAT)
-        }
-    }
-}
-
-fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
-    recreate_volatile_subdir(volatile_path, "home", changed_state);
-}
-
-fn check_managed_volumes_availability(project_state: &ProjectConfigLock) {
-    for (_, binary_config) in project_state.get_binaries_configs() {
-        if let Some(run_config) = binary_config.get_run_config() {
-            if let Some(volume_configs) = run_config.get_volumes() {
-                volume_configs
-                    .iter()
-                    .for_each(check_managed_volume_existence);
-            }
-        }
-    }
-}
-
-fn check_managed_volume_existence(volume_config: &VolumeConfigLock) {
-    match Command::new("docker")
-        .args(&["volume", "inspect", volume_config.get_name()])
-        .output()
-    {
-        Ok(output) => {
-            if !output.status.success() {
-                create_volume(volume_config.get_name(), volume_config.get_container_path());
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Unable to inspect volume {}\n\n{}\n",
-                volume_config.get_name(),
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    }
-}
-
-fn create_volume(volume_name: &str, container_path: &PathBuf) {
-    match Command::new("docker")
-        .args(&["volume", "create", volume_name])
-        .output()
-    {
-        Ok(output) => {
-            if !output.status.success() {
-                eprintln!("Unable to create volume {}", volume_name);
-                exit(exitcode::SOFTWARE);
-            }
-
-            change_volume_permissions(volume_name, container_path)
-        }
-        Err(e) => {
-            eprintln!(
-                "Unable to create volume {}\n\n{}\n",
-                volume_name,
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    }
-}
-
-fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
-    match Command::new("docker")
-        .args(&[
-            "run",
-            "--rm",
-            "--volume",
-            &format!("{}:{}", volume_name, container_path.display()),
-            "alpine:3.12",
-            "sh",
-            "-c",
-            &format!(
-                "chown -R {}:{} {}",
-                nix::unistd::getuid(),
-                nix::unistd::getgid(),
-                container_path.display()
-            ),
-        ])
-        .output()
-    {
-        Ok(output) => {
-            if !output.status.success() {
-                eprintln!("Unable to change permissions for volume {}", volume_name);
-                exit(exitcode::SOFTWARE);
-            }
-        }
-        Err(e) => {
-            eprintln!(
-                "Unable to change permissions for volume {}\n\n{}\n",
-                volume_name,
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    }
+fn update_project_state(
+    project_state_path: &PathBuf,
+    mut project_state: ProjectConfigLock,
+    config_lock_hash: &[u8],
+) -> ProjectConfigLock {
+    project_state = project_state.update_project_config_hash(config_lock_hash);
+    save_config_lock(project_state_path, &project_state);
+    project_state
 }

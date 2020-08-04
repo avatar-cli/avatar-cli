@@ -17,7 +17,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
 use crate::directories::{
     check_if_inside_project_dir, get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME,
-    CONFIG_DIR_NAME, CONTAINER_HOME_PATH, VOLATILE_DIR_NAME, STATEFILE_NAME,
+    CONFIG_DIR_NAME, CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
 };
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
 
