@@ -23,12 +23,12 @@ use crate::subcommands::AVATAR_CLI_VERSION;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ImageBinaryConfig {
-    path: PathBuf,
+    path: Option<PathBuf>,
     run_config: Option<OCIContainerRunConfig>,
 }
 
 impl ImageBinaryConfig {
-    pub fn get_path(&self) -> &PathBuf {
+    pub fn get_path(&self) -> &Option<PathBuf> {
         &self.path
     }
 

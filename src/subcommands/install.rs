@@ -189,7 +189,6 @@ fn check_etc_passwd_files(
             } else if found_csh {
                 "/bin/csh"
             } else {
-                // it includes found_sh
                 "/bin/sh"
             };
 
@@ -553,7 +552,7 @@ fn get_binaries_settings(
                                 ImageBinaryConfigLock::new(
                                     image_name.clone(),
                                     image_config.get_hash().clone(),
-                                    binary_config.get_path().clone(),
+                                    binary_config.get_path().clone().unwrap_or(PathBuf::from(binary_name)),
                                     merge_run_configs(
                                         image_config.get_run_config(),
                                         binary_config.get_run_config(),

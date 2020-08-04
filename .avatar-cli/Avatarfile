@@ -13,17 +13,12 @@ images:
           "/caches/.npm": {}
 
       binaries:
-        node:
-          path: node
-        npm:
-          path: npm
-        npx:
-          path: npx
-        yarn:
-          path: yarn
+        node: {}
+        npm: {}
+        npx: {}
+        yarn: {}
 
   rust:
     1.45-stretch:
       binaries:
-        cargo:
-          path: cargo
+        cargo: {}

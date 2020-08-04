@@ -116,12 +116,11 @@ images:
           # Although we don't do it in this example, each binary can have its
           # own `runConfig` block, and its values will override the ones defined
           # at the image tag level
-        npm:
-          path: npm
-        npx:
-          path: npx
-        yarn:
-          path: yarn
+
+        # Usually we can skip configuring the binary, we just have to list it
+        npm: {}
+        npx: {}
+        yarn: {}
 
   # Image name
   rust:
