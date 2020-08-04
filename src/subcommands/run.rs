@@ -298,10 +298,13 @@ fn get_user_integration_args(
         dynamic_args.push(format!("USERNAME={}", user.name));
     }
 
-    // TODO: Detect if running in Mac or WSL, and apply this hack:
-    // https://github.com/docker/for-mac/issues/410#issuecomment-536531657
-    push_socket_dir_args("SSH_AUTH_SOCK", &mut dynamic_args);
-    push_socket_dir_args("GPG_AGENT_INFO", &mut dynamic_args);
+    if cfg!(target_os = "linux") {
+        push_socket_dir_args("SSH_AUTH_SOCK", &mut dynamic_args);
+        push_socket_dir_args("GPG_AGENT_INFO", &mut dynamic_args);
+    } else if cfg!(target_os = "macos") {
+        #[cfg(target_os = "macos")]
+        push_ssh_agent_socket_args(&mut dynamic_args);
+    }
 
     if let Some(home_dir) = dirs::home_dir() {
         push_home_config_args(&home_dir, ".ssh", &mut dynamic_args);
@@ -359,6 +362,19 @@ fn get_user_integration_args(
     dynamic_args
 }
 
+#[cfg(target_os = "macos")]
+fn push_ssh_agent_socket_args(dynamic_args: &mut Vec<String>) {
+    // https://github.com/docker/for-mac/issues/410#issuecomment-536531657
+
+    if let Ok(v) = env::var("SSH_AUTH_SOCK") {
+        dynamic_args.push("--env".to_string());
+        dynamic_args.push("SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock".to_string());
+        dynamic_args.push("-v".to_string());
+        dynamic_args.push("/run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock".to_string());
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn push_socket_dir_args(socket_var_name: &str, dynamic_args: &mut Vec<String>) {
     if let Ok(v) = env::var(socket_var_name) {
         if let Some(sockets_dir) = PathBuf::from(&v).parent() {
