@@ -10,7 +10,7 @@ images:
         envFromHost:
           - NPM_TOKEN
         volumes:
-          "/caches/.npm": {}
+          /caches/.npm: {}
 
       binaries:
         node: {}
@@ -20,5 +20,11 @@ images:
 
   rust:
     1.45-stretch:
+      runConfig:
+        env:
+          CARGO_HOME: /caches/.cargo
+        volumes:
+          /caches/.cargo: {}
+
       binaries:
         cargo: {}

@@ -1,5 +1,5 @@
 ---
-projectConfigHash: adb3222ff125ec39ba6fc4b2f5def26eda1f95a4cb77adca00192a0cd3ff13fc
+projectConfigHash: f18e62b288cacdd07a5bc7b863a99c3f13e9b49a23a71f59b0e47ba614e0b46f
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   node:
@@ -18,13 +18,28 @@ images:
   rust:
     1.45-stretch:
       hash: 1c46ba753874698dfa8f35a5a7f034e3304349fbca406883c45f364dd8b2f870
-      runConfig: ~
+      runConfig:
+        env:
+          CARGO_HOME: /caches/.cargo
+        envFromHost: ~
+        volumes:
+          /caches/.cargo:
+            name: ~
+            scope: Project
+        bindings: ~
 binaries:
   cargo:
     ociImageName: rust
     ociImageHash: 1c46ba753874698dfa8f35a5a7f034e3304349fbca406883c45f364dd8b2f870
     path: cargo
-    runConfig: ~
+    runConfig:
+      env:
+        CARGO_HOME: /caches/.cargo
+      envFromHost: ~
+      volumes:
+        - containerPath: /caches/.cargo
+          volumeName: prj_v2ZmtbkGuVdvGwVE_23871e86f8681b039cffcca6b1b5f6fe
+      bindings: ~
   node:
     ociImageName: node
     ociImageHash: efa8bcbad1b41582d1dcae7066b2da3d102a4b326c30d72ed469949115beaff7
