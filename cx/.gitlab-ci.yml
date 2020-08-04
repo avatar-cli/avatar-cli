@@ -28,6 +28,17 @@ test:
     - rustup component add clippy
     - cargo clippy
 
+gitlab_publish:
+  stage: publish
+  image: 'node:14-buster'
+  only:
+    refs:
+      - main
+  script:
+    - 'cd "${CI_PROJECT_DIR}/cx"'
+    - 'npm install'
+    - './node_modules/.bin/ts-node ./src/scripts/gitlab_publish.ts'
+
 crates_publish:
   stage: publish
   image: 'rust:1.45-stretch'
