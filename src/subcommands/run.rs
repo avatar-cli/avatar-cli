@@ -311,28 +311,13 @@ fn get_user_integration_args(
         push_home_config_args(&home_dir, ".gnupg", &mut dynamic_args);
     }
 
-    let passwd_path = project_path
-        .join(CONFIG_DIR_NAME)
-        .join(VOLATILE_DIR_NAME)
-        .join("images")
-        .join(image_ref)
-        .join("passwd");
-    if passwd_path.exists() {
-        if !passwd_path.is_file() {
-            eprintln!(
-                "The path {} must point to a regular file, found something else",
-                passwd_path.display()
-            );
-            exit(exitcode::USAGE)
-        }
+    push_passwd_args(image_ref, project_path, &mut dynamic_args);
+    push_git_args(&mut dynamic_args);
 
-        dynamic_args.push("--mount".to_string());
-        dynamic_args.push(format!(
-            "type=bind,source={},target=/etc/passwd",
-            passwd_path.display()
-        ));
-    }
+    dynamic_args
+}
 
+fn push_git_args(dynamic_args: &mut Vec<String>) {
     if let Ok(output) = Command::new("git").args(&["config", "user.name"]).output() {
         if output.status.success() {
             if let Ok(git_user_name) = from_utf8(&output.stdout) {
@@ -358,8 +343,30 @@ fn get_user_integration_args(
             }
         }
     }
+}
 
-    dynamic_args
+fn push_passwd_args(image_ref: &str, project_path: &PathBuf, dynamic_args: &mut Vec<String>) {
+    let passwd_path = project_path
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
+        .join("images")
+        .join(image_ref)
+        .join("passwd");
+    if passwd_path.exists() {
+        if !passwd_path.is_file() {
+            eprintln!(
+                "The path {} must point to a regular file, found something else",
+                passwd_path.display()
+            );
+            exit(exitcode::USAGE)
+        }
+
+        dynamic_args.push("--mount".to_string());
+        dynamic_args.push(format!(
+            "type=bind,source={},target=/etc/passwd",
+            passwd_path.display()
+        ));
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -370,7 +377,8 @@ fn push_ssh_agent_socket_args(dynamic_args: &mut Vec<String>) {
         dynamic_args.push("--env".to_string());
         dynamic_args.push("SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock".to_string());
         dynamic_args.push("-v".to_string());
-        dynamic_args.push("/run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock".to_string());
+        dynamic_args
+            .push("/run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock".to_string());
     }
 }
 

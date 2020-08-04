@@ -39,13 +39,13 @@ In the command line:
 # 1. Enter into your project directory
 cd /your/project/path
 
-# 2. Initialize Avatar-CLI for this project, this will create a new config
-#    file.
+# 2. Initialize Avatar-CLI for this project, this will create a new config file.
+#    You only have to do this one single time per project.
 avatar init
 
 # 3. Edit the generated configuration file, without modifying its
 #    `internalProjectId` property. You can see an example in the next code
-#    block of this text.
+#    block of this README.md file.
 
 # 4. Now you can enter into an Avatar-CLI subshell and use all the configured
 #    tools. If, for example, you configured a specific version of NodeJS, then
