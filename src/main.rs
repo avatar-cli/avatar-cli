@@ -11,7 +11,7 @@ mod subcommands;
 
 fn main() {
     let used_program_name = avatar_env::get_used_program_name();
-    if used_program_name == "avatar" || used_program_name == "avatar-cli" {
+    if used_program_name == "avatar" {
         subcommands::select()
     } else {
         subcommands::run::run_in_subshell_mode(&used_program_name)

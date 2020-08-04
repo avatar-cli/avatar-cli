@@ -52,7 +52,6 @@ pub(crate) fn select() {
     match matches.subcommand_name() {
         Some(subcommand_name) => match subcommand_name {
             "avatar" => exit(exitcode::OK),
-            "avatar-cli" => exit(exitcode::OK),
             "init" => {
                 let init_matches = matches.subcommand_matches("init").unwrap();
                 let project_path = match init_matches.value_of("project_path") {

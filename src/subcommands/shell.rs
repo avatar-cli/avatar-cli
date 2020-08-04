@@ -13,7 +13,10 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use crate::avatar_env::{
     CONFIG_LOCK_PATH, CONFIG_PATH, PROJECT_INTERNAL_ID, PROJECT_PATH, SESSION_TOKEN, STATE_PATH,
 };
-use crate::subcommands::install::install_subcommand;
+use crate::{
+    directories::{CONFIG_DIR_NAME, VOLATILE_DIR_NAME},
+    subcommands::install::install_subcommand,
+};
 
 pub(crate) fn shell_subcommand() {
     let (project_path, config_path, config_lock_path, project_state_path, project_state) =
@@ -35,8 +38,8 @@ pub(crate) fn shell_subcommand() {
         }
     };
     let avatar_bin_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
         .join("bin");
     let path_var = format!("{}:{}", avatar_bin_path.display(), path_var);
 

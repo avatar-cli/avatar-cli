@@ -8,7 +8,7 @@ use std::fs::{create_dir, read, remove_dir_all, write};
 use std::{path::PathBuf, process::exit};
 
 use crate::{
-    directories::get_project_path,
+    directories::{get_project_path, AVATARFILE_NAME, CONFIG_DIR_NAME},
     project_config::{save_config, ProjectConfig},
 };
 
@@ -21,37 +21,37 @@ pub(crate) fn init_subcommand(project_path: &PathBuf) {
         exit(exitcode::USAGE)
     }
 
-    let settings_dir = project_path.join(".avatar-cli");
-    if settings_dir.exists() {
-        if settings_dir.is_file() {
+    let config_dir = project_path.join(CONFIG_DIR_NAME);
+    if config_dir.exists() {
+        if config_dir.is_file() {
             eprintln!(
                 "The path {} must point to a directory, found something else",
-                settings_dir.display()
+                config_dir.display()
             );
             exit(exitcode::USAGE)
         }
 
-        if let Err(e) = remove_dir_all(&settings_dir) {
+        if let Err(e) = remove_dir_all(&config_dir) {
             eprintln!(
                 "Unable to delete broken settings directory {}\n\n{}\n",
-                settings_dir.display(),
+                config_dir.display(),
                 e.to_string()
             );
             exit(exitcode::OSERR)
         }
     }
 
-    if let Err(e) = create_dir(&settings_dir) {
+    if let Err(e) = create_dir(&config_dir) {
         eprintln!(
             "Unable to create settings directory {}\n\n{}\n",
-            settings_dir.display(),
+            config_dir.display(),
             e.to_string()
         );
         exit(exitcode::CANTCREAT)
     }
 
     let config = ProjectConfig::new();
-    let config_filepath = settings_dir.join("avatar-cli.yml");
+    let config_filepath = config_dir.join(AVATARFILE_NAME);
     save_config(&config_filepath, &config);
 
     patch_gitignore(project_path);

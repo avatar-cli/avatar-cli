@@ -19,7 +19,10 @@ use ring::digest::{digest, Digest, SHA256};
 
 use crate::{
     avatar_env::SESSION_TOKEN,
-    directories::get_project_path,
+    directories::{
+        get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME, CONFIG_DIR_NAME,
+        CONTAINER_HOME_PATH, VOLATILE_DIR_NAME, STATEFILE_NAME,
+    },
     project_config::{
         get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
         OCIContainerRunConfig, OCIImageConfig, OCIImageConfigLock, ProjectConfig,
@@ -44,11 +47,11 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
         }
     };
 
-    let project_data_path = project_path.join(".avatar-cli");
-    let config_path = project_data_path.join("avatar-cli.yml");
-    let config_lock_path = project_data_path.join("avatar-cli.lock.yml");
-    let volatile_path = project_data_path.join("volatile");
-    let project_state_path = volatile_path.join("state.yml");
+    let project_data_path = project_path.join(CONFIG_DIR_NAME);
+    let config_path = project_data_path.join(AVATARFILE_NAME);
+    let config_lock_path = project_data_path.join(AVATARFILE_LOCK_NAME);
+    let volatile_path = project_data_path.join(VOLATILE_DIR_NAME);
+    let project_state_path = volatile_path.join(STATEFILE_NAME);
 
     let (project_state, changed_state) =
         check_project_settings(&config_path, &config_lock_path, &project_state_path);
@@ -197,7 +200,8 @@ fn check_etc_passwd_files(
                 "/bin/ksh"
             } else if found_csh {
                 "/bin/csh"
-            } else { // it includes found_sh
+            } else {
+                // it includes found_sh
                 "/bin/sh"
             };
 
@@ -206,8 +210,8 @@ fn check_etc_passwd_files(
                 if let Err(e) = write(
                     &local_etc_passwd_path,
                     format!(
-                        "{}:x:{}:{}::/home/avatar-cli:{}\n",
-                        username, uid, gid, inferred_passwd_shell
+                        "{}:x:{}:{}::{}:{}\n",
+                        username, uid, gid, CONTAINER_HOME_PATH, inferred_passwd_shell
                     )
                     .as_bytes(),
                 ) {
@@ -251,8 +255,8 @@ fn check_etc_passwd_files(
 
                             found_user_line = true;
                             passwd_dst_contents.push_str(&format!(
-                                "{}:x:{}:{}::/home/avatar-cli:{}\n",
-                                username, uid, gid, passwd_shell
+                                "{}:x:{}:{}::{}:{}\n",
+                                username, uid, gid, CONTAINER_HOME_PATH, passwd_shell
                             ))
                         } else {
                             passwd_dst_contents.push_str(trimmed_user_line);
@@ -266,8 +270,8 @@ fn check_etc_passwd_files(
                 }
                 if !found_user_line {
                     passwd_dst_contents.push_str(&format!(
-                        "{}:x:{}:{}::/home/avatar-cli:{}\n",
-                        username, uid, gid, inferred_passwd_shell
+                        "{}:x:{}:{}::{}:{}\n",
+                        username, uid, gid, CONTAINER_HOME_PATH, inferred_passwd_shell
                     ))
                 }
                 if let Err(e) = write(&local_etc_passwd_path, passwd_dst_contents.as_bytes()) {

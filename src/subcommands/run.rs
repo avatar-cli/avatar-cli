@@ -15,7 +15,10 @@ use std::{
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
-use crate::directories::{check_if_inside_project_dir, get_project_path};
+use crate::directories::{
+    check_if_inside_project_dir, get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME,
+    CONFIG_DIR_NAME, CONTAINER_HOME_PATH, VOLATILE_DIR_NAME, STATEFILE_NAME,
+};
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
 
 pub(crate) fn run_subcommand() {
@@ -66,22 +69,24 @@ fn run(project_path: &PathBuf, used_program_name: &str, session_token: &str, ski
 
     check_if_inside_project_dir(project_path, &current_dir);
 
-    let config_path = project_path.join(".avatar-cli").join("avatar-cli.yml");
+    let config_path = project_path.join(CONFIG_DIR_NAME).join(AVATARFILE_NAME);
     if !config_path.exists() || !config_path.is_file() {
         eprintln!("The config file '{}' is not available anymore, please check if there is any background process modifying files in your project directory", config_path.display());
         exit(exitcode::NOINPUT)
     }
 
-    let config_lock_path = project_path.join(".avatar-cli").join("avatar-cli.lock.yml");
+    let config_lock_path = project_path
+        .join(CONFIG_DIR_NAME)
+        .join(AVATARFILE_LOCK_NAME);
     if !config_lock_path.exists() || !config_lock_path.is_file() {
         eprintln!("The config lock file '{}' is not available anymore, please check if there is any background process modifying files in your project directory", config_lock_path.display());
         exit(exitcode::NOINPUT)
     }
 
     let project_state_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
-        .join("state.yml");
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
+        .join(STATEFILE_NAME);
     if !project_state_path.exists() || !project_state_path.is_file() {
         eprintln!("The project state file '{}' is not available anymore, please check if there is any background process modifying files in your project directory", project_state_path.display());
         exit(exitcode::NOINPUT)
@@ -227,8 +232,8 @@ fn run_docker_command(
 
     let uid = nix::unistd::getuid();
     let home_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
         .join("home");
 
     let image_ref = format!(
@@ -264,11 +269,12 @@ fn run_docker_command(
             &format!("/playground/{}", working_dir.display()),
             "--mount",
             &format!(
-                "type=bind,source={},target=/home/avatar-cli",
-                home_path.display() // TODO: Escape commas?
+                "type=bind,source={},target={}",
+                home_path.display(), // TODO: Escape commas?
+                CONTAINER_HOME_PATH
             ),
             "--env",
-            "HOME=/home/avatar-cli",
+            &format!("HOME={}", CONTAINER_HOME_PATH),
         ])
         .args(dynamic_mounts)
         .args(get_user_integration_args(uid, &image_ref, project_path))
@@ -303,8 +309,8 @@ fn get_user_integration_args(
     }
 
     let passwd_path = project_path
-        .join(".avatar-cli")
-        .join("volatile")
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
         .join("images")
         .join(image_ref)
         .join("passwd");
@@ -373,8 +379,9 @@ fn push_home_config_args(home_dir: &PathBuf, config_name: &str, dynamic_args: &m
     if config_dir.exists() && config_dir.is_dir() {
         dynamic_args.push("--mount".to_string());
         dynamic_args.push(format!(
-            "type=bind,source={},target=/home/avatar-cli/{}",
+            "type=bind,source={},target={}/{}",
             config_dir.display(),
+            CONTAINER_HOME_PATH,
             config_name
         ));
     }

@@ -8,6 +8,13 @@ use std::env;
 use std::path::PathBuf;
 use std::process::exit;
 
+pub(crate) const AVATARFILE_NAME: &str = "Avatarfile";
+pub(crate) const AVATARFILE_LOCK_NAME: &str = "Avatarfile.lock";
+pub(crate) const CONFIG_DIR_NAME: &str = ".avatar-cli";
+pub(crate) const CONTAINER_HOME_PATH: &str = "/home/avatar-cli";
+pub(crate) const STATEFILE_NAME: &str = "state.yml";
+pub(crate) const VOLATILE_DIR_NAME: &str = "volatile";
+
 pub(crate) fn get_project_path() -> Option<PathBuf> {
     let current_dir = match env::current_dir() {
         Ok(p) => p,
@@ -18,7 +25,7 @@ pub(crate) fn get_project_path() -> Option<PathBuf> {
     };
 
     for ancestor in current_dir.ancestors() {
-        let config_path = ancestor.join(".avatar-cli").join("avatar-cli.yml");
+        let config_path = ancestor.join(CONFIG_DIR_NAME).join(AVATARFILE_NAME);
         if config_path.exists() && config_path.is_file() {
             return Some(ancestor.to_owned());
         }
