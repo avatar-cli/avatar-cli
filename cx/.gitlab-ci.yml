@@ -2,6 +2,7 @@
 stages:
   - boilerplate_checks
   - test
+  - build_release
   - publish
 
 boilerplate_checks:
@@ -29,6 +30,24 @@ test:
   script:
     - rustup component add clippy
     - cargo clippy
+
+build_release:
+  stage: build_release
+  image: 'rust:1.45-stretch'
+  except:
+    refs:
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  only:
+    refs:
+      - main
+  script:
+    - cargo build --release
+    - strip ./target/release/avatar
+  artifacts:
+    expire_in: never
+    name: "linux-binary-release-$CI_COMMIT_SHA"
+    paths:
+      - ./target/release/avatar
 
 gitlab_publish:
   stage: publish
