@@ -11,6 +11,7 @@ boilerplate_checks:
     refs:
       - dev
       - main
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   script:
     - 'cd "${CI_PROJECT_DIR}/cx"'
     - 'npm install'
@@ -24,6 +25,7 @@ test:
     refs:
       - dev
       - main
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   script:
     - rustup component add clippy
     - cargo clippy
@@ -31,6 +33,9 @@ test:
 gitlab_publish:
   stage: publish
   image: 'node:14-buster'
+  except:
+    refs:
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   only:
     refs:
       - main
@@ -42,6 +47,9 @@ gitlab_publish:
 crates_publish:
   stage: publish
   image: 'rust:1.45-stretch'
+  except:
+    refs:
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   only:
     refs:
       - main
