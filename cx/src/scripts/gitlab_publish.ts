@@ -71,6 +71,64 @@ async function createCratesIoLink(
   }
 }
 
+async function addLinuxBinaryToRelease(
+  ciProjectId: string,
+  ciPipelineId: string,
+  newTag: string,
+  releaseToken: string
+): Promise<void> {
+  const jobsListResponse = await fetch(
+    `https://gitlab.com/api/v4/projects/${ciProjectId}/pipelines/${ciPipelineId}/jobs?scope[]=success`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${releaseToken}` },
+    }
+  )
+
+  if (!jobsListResponse.ok || jobsListResponse.status >= 300) {
+    console.error(`Jobs List Response's HTTP Status:\n\r${jobsListResponse.status}\n`)
+    console.error(`Jobs List Response's Body:\n${jobsListResponse.text()}\n`)
+    throw new Error('Error while getting pipeline jobs list')
+  }
+
+  const jobsList: { id: number; stage: string; name: string }[] = await jobsListResponse.json()
+
+  let jobId: null | number = null
+  for (const job of jobsList) {
+    if (job && job.stage === 'build_release' && job.name === 'build_linux_release') {
+      jobId = job.id
+      break
+    }
+  }
+  if (jobId === null) {
+    throw new Error('Unable to find job id for "build_linux_release"')
+  }
+
+  const artifactUrl = `https://gitlab.com/api/v4/projects/${ciProjectId}/jobs/${jobId}/artifacts/target/release/avatar`
+
+  const artifactLinkResponse = await fetch(
+    `https://gitlab.com/api/v4/projects/${ciProjectId}/releases/${newTag}/assets/links`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        link_type: 'other',
+        name: 'Linux Binary',
+        url: artifactUrl,
+      }),
+      headers: {
+        Authorization: `Bearer ${releaseToken}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
+
+  if (!artifactLinkResponse.ok || artifactLinkResponse.status >= 300) {
+    console.error(`Artifact Link Creation Response's HTTP Status:\n\r${artifactLinkResponse.status}\n`)
+    console.error(`Artifact Link Creation Response's Body:\n${await artifactLinkResponse.text()}\n`)
+    throw new Error('Error while creating new Artifact link')
+  }
+}
+
 async function run(): Promise<void> {
   const env = await getCxEnvVars()
 
@@ -83,6 +141,10 @@ async function run(): Promise<void> {
   if (ciProjectId === '') {
     throw new Error('Project ID not defined')
   }
+  const ciPipelineId = env.CI_PIPELINE_ID ?? ''
+  if (ciPipelineId === '') {
+    throw new Error('Pipeline ID not defined')
+  }
   const releaseToken = env.GITLAB_RELEASE_TOKEN ?? ''
   if (releaseToken === '') {
     throw new Error('CI token not defined')
@@ -91,6 +153,7 @@ async function run(): Promise<void> {
   await createNewTag(ciProjectId, newTag, gitRef, releaseToken)
   await createNewRelease(ciProjectId, newTag, releaseToken)
   await createCratesIoLink(ciProjectId, newTag, newVersion, releaseToken)
+  await addLinuxBinaryToRelease(ciProjectId, ciPipelineId, newTag, releaseToken)
 }
 
 run()

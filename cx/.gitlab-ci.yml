@@ -31,7 +31,7 @@ test:
     - rustup component add clippy
     - cargo clippy
 
-build_release:
+build_linux_release:
   stage: build_release
   image: 'rust:1.45-stretch'
   except:
