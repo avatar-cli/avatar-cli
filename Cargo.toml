@@ -1,6 +1,6 @@
 [package]
 name = "avatar-cli"
-version = "0.15.0"
+version = "0.15.1"
 license = "GPL-3.0"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
 keywords = [ "cli", "containers", "docker" ]

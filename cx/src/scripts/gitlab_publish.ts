@@ -16,8 +16,8 @@ async function run(): Promise<void> {
   if (ciProjectId === '') {
     throw new Error('Project ID not defined')
   }
-  const ciToken = env.CI_JOB_TOKEN ?? ''
-  if (ciToken === '') {
+  const releaseToken = env.GITLAB_RELEASE_TOKEN ?? ''
+  if (releaseToken === '') {
     throw new Error('CI token not defined')
   }
 
@@ -26,7 +26,7 @@ async function run(): Promise<void> {
     {
       method: 'POST',
       headers: {
-        'PRIVATE-TOKEN': ciToken,
+        Authorization: `Bearer ${releaseToken}`,
       },
     }
   )
@@ -37,15 +37,16 @@ async function run(): Promise<void> {
     throw new Error('Error while creating new tag')
   }
 
-  const releaseCreationResponse = await fetch(
-    `https://gitlab.com/api/v4/projects/${ciProjectId}/repository/tags/${newTag}/release`,
-    {
-      method: 'POST',
-      headers: {
-        'PRIVATE-TOKEN': ciToken,
-      },
-    }
-  )
+  const releaseCreationResponse = await fetch(`https://gitlab.com/api/v4/projects/${ciProjectId}/releases`, {
+    method: 'POST',
+    body: JSON.stringify({
+      tag_name: newTag,
+    }),
+    headers: {
+      Authorization: `Bearer ${releaseToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
 
   if (!releaseCreationResponse.ok || releaseCreationResponse.status >= 300) {
     console.error(`Release Creation Response's HTTP Status:\n\t${releaseCreationResponse.status}\n`)
