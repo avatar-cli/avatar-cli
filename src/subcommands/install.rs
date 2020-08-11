@@ -107,7 +107,7 @@ fn check_etc_passwd_files(
 
             let install_container_name = format!(
                 "{}_{}_{}_{}_passwd",
-                project_internal_id, image_name, image_tag, image_hash
+                project_internal_id, image_name.replace('/', "."), image_tag, image_hash
             );
             match Command::new("docker")
                 .args(&[
@@ -751,7 +751,7 @@ fn pull_oci_image_by_fqn(image_ref: String) {
     // This code assumes that the existence of the docker command has been checked before
     if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
         eprintln!(
-            "Unable to pull image {}.\n\n{}\n",
+            "Unable to pull OCI image {}.\n\n{}\n",
             image_ref,
             err.to_string()
         );
