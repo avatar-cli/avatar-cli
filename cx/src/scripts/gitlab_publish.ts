@@ -93,27 +93,35 @@ async function addLinuxBinaryToRelease(
 
   const jobsList: { id: number; stage: string; name: string }[] = await jobsListResponse.json()
 
-  let jobId: null | number = null
+  let glibcJobId: null | number = null
+  let muslcJobId: null | number = null
   for (const job of jobsList) {
-    if (job && job.stage === 'build_release' && job.name === 'build_linux_release') {
-      jobId = job.id
-      break
+    if (job && job.stage === 'build_release') {
+      if (job.name === 'build_linux_glibc_release') {
+        glibcJobId = job.id
+      } else if (job.name === 'build_linux_muslc_release') {
+        muslcJobId = job.id
+      }
     }
   }
-  if (jobId === null) {
-    throw new Error('Unable to find job id for "build_linux_release"')
+  if (glibcJobId === null) {
+    throw new Error('Unable to find job id for "build_linux_glibc_release"')
+  }
+  if (muslcJobId === null) {
+    throw new Error('Unable to find job id for "build_linux_muslc_release"')
   }
 
-  const artifactUrl = `https://gitlab.com/api/v4/projects/${ciProjectId}/jobs/${jobId}/artifacts/target/release/avatar`
+  const glibcArtifactUrl = `https://gitlab.com/api/v4/projects/${ciProjectId}/jobs/${glibcJobId}/artifacts/target/release/avatar`
+  const muslcArtifactUrl = `https://gitlab.com/api/v4/projects/${ciProjectId}/jobs/${muslcJobId}/artifacts/target/release/avatar`
 
-  const artifactLinkResponse = await fetch(
+  const glibcArtifactLinkResponse = await fetch(
     `https://gitlab.com/api/v4/projects/${ciProjectId}/releases/${newTag}/assets/links`,
     {
       method: 'POST',
       body: JSON.stringify({
         link_type: 'other',
-        name: 'Linux Binary',
-        url: artifactUrl,
+        name: 'Linux Binary (GLIBC) - For Most Linux Distros',
+        url: glibcArtifactUrl,
       }),
       headers: {
         Authorization: `Bearer ${releaseToken}`,
@@ -122,10 +130,32 @@ async function addLinuxBinaryToRelease(
     }
   )
 
-  if (!artifactLinkResponse.ok || artifactLinkResponse.status >= 300) {
-    console.error(`Artifact Link Creation Response's HTTP Status:\n\r${artifactLinkResponse.status}\n`)
-    console.error(`Artifact Link Creation Response's Body:\n${await artifactLinkResponse.text()}\n`)
-    throw new Error('Error while creating new Artifact link')
+  if (!glibcArtifactLinkResponse.ok || glibcArtifactLinkResponse.status >= 300) {
+    console.error(`Glibc Artifact Link Creation Response's HTTP Status:\n\r${glibcArtifactLinkResponse.status}\n`)
+    console.error(`Glibc Artifact Link Creation Response's Body:\n${await glibcArtifactLinkResponse.text()}\n`)
+    throw new Error('Error while creating new Glibc Artifact link')
+  }
+
+  const muslcArtifactLinkResponse = await fetch(
+    `https://gitlab.com/api/v4/projects/${ciProjectId}/releases/${newTag}/assets/links`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        link_type: 'other',
+        name: 'Linux Binary (MUSLC) - For Alpine Linux',
+        url: muslcArtifactUrl,
+      }),
+      headers: {
+        Authorization: `Bearer ${releaseToken}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
+
+  if (!muslcArtifactLinkResponse.ok || muslcArtifactLinkResponse.status >= 300) {
+    console.error(`Muslc Artifact Link Creation Response's HTTP Status:\n\r${muslcArtifactLinkResponse.status}\n`)
+    console.error(`Muslc Artifact Link Creation Response's Body:\n${await muslcArtifactLinkResponse.text()}\n`)
+    throw new Error('Error while creating new Muslc Artifact link')
   }
 }
 

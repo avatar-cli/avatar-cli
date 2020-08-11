@@ -31,9 +31,9 @@ test:
     - rustup component add clippy
     - cargo clippy
 
-build_linux_release:
+.build_linux_release: &build_linux_release
   stage: build_release
-  image: 'rust:1.45-stretch'
+  image: 'rust:$RUST_DOCKER_TAG'
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
@@ -45,9 +45,21 @@ build_linux_release:
     - strip ./target/release/avatar
   artifacts:
     expire_in: never
-    name: "linux-binary-release-$CI_COMMIT_SHA"
+    name: "linux-$LIBC_TYPE-release-$CI_COMMIT_SHA"
     paths:
       - ./target/release/avatar
+
+build_linux_glibc_release:
+  <<: *build_linux_release
+  variables:
+    RUST_DOCKER_TAG: 1.45-stretch
+    LIBC_TYPE: glibc
+
+build_linux_muslc_release:
+  <<: *build_linux_release
+  variables:
+    RUST_DOCKER_TAG: 1.45-alpine3.11
+    LIBC_TYPE: muslc
 
 gitlab_publish:
   stage: publish
