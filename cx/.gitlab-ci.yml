@@ -60,6 +60,8 @@ build_linux_muslc_release:
   variables:
     RUST_DOCKER_TAG: 1.45-alpine3.11
     LIBC_TYPE: muslc
+  before_script:
+    - apk add gcc g++
 
 gitlab_publish:
   stage: publish
@@ -89,6 +91,26 @@ crates_publish:
   script:
     - cargo login ${CARGO_TOKEN}
     - cargo publish --no-verify
+
+docker_publish:
+  variables:
+    DOCKER_IMAGE_VERSION: '19.03.12'
+  stage: publish
+  image: 'docker:$DOCKER_IMAGE_VERSION-git'
+  services:
+    - docker:$DOCKER_IMAGE_VERSION-dind
+  except:
+    refs:
+      - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  only:
+    refs:
+      - main
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --build-arg DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION --tag $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:latest
+  dependencies:
+    - build_linux_muslc_release
 
 include:
   # See https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings

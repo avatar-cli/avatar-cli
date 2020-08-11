@@ -1,0 +1,53 @@
+# Git
+.git
+.git/*
+.git/**/*
+
+# Avatar-CLI
+.avatar-cli
+.avatar-cli/*
+.avatar-cli/**/*
+
+# Code
+src
+src/*
+src/**/*
+
+# CI/CD
+cx
+cx/*
+cx/**/*
+
+# Builds (We only leave the release binary)
+target/doc
+target/doc/*
+target/doc/**/*
+target/debug
+target/debug/*
+target/debug/**/*
+target/release/.fingerprint
+target/release/.fingerprint/*
+target/release/.fingerprint/**/*
+target/release/build
+target/release/build/*
+target/release/build/**/*
+target/release/deps
+target/release/deps/*
+target/release/deps/**/*
+target/release/examples
+target/release/examples/*
+target/release/examples/**/*
+target/release/incremental
+target/release/incremental/*
+target/release/incremental/**/*
+
+# Miscelanea
+.dockerignore
+.gitignore
+Cargo.lock
+Cargo.toml
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+Dockerfile
+LICENSE
+README.md
