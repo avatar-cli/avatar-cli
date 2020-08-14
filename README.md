@@ -17,20 +17,28 @@ the development forkflow in many ways:
     pattern.
   - Making possible for new contributors to be productive from the very first
     minute, reducing the bootstrap/setup time to almost zero. Only `git` and
-    `docker` are required (in a way, not even `avatar-cli` is required! 😉).
+    `docker` are required.
 
 ## How to install Avatar-CLI
 
-For now, Avatar-CLI is only available in its source code form, or via `cargo`.
-The recommended way to install is is using this command:
+### Downloading pre-compiled binaries
+
+You can get our pre-compiled binaries in the
+[Releases](https://gitlab.com/avatar-cli/avatar-cli/-/releases) section. For now
+we only can provide Linux binaries, but in the future we'll also provide
+binaries for Macos.
+
+### Via Cargo
+
+If you want to use Avatar-CLi in Macos, or you don't mind waiting a little bit
+more for its compilation, you can use `cargo` to install it:
+
 ```bash
 cargo install avatar-cli
 ```
 
 If you don't have `cargo` in your system, you can obtain it via
 [rustup](https://rustup.rs/).
-
-In future releases, pre-compiled binaries will be provided too.
 
 ## How to use Avatar-CLI
 
@@ -130,6 +138,16 @@ images:
         cargo:
           path: cargo
 ```
+
+## Using Avatar-CLI in CI/CD pipelines
+
+If you want to use Avatar-CLI in your own CI/CD pipelines, you can rely on the
+generated OCI images. We provide the Avatar-CLI images through three different
+registries:
+
+- **Gitlab CI Registry**: `registry.gitlab.com/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
+- **Github Registry**: `docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
+- **Docker Hub**: `avatarcli/avatar-cli:[ major[.minor[.patch]] | latest ]`
 
 ## Troubleshooting
 
