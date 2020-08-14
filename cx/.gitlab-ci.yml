@@ -143,7 +143,7 @@ docker_publish:
     - 'docker push avatarcli/avatar-cli:latest'
 
     # Github Registry
-    - 'docker login -u $GITHUB_REGISTRY_USER -p $GITHUB_REGISTRY_TOKEN'
+    - 'docker login -u $GITHUB_REGISTRY_USER -p $GITHUB_REGISTRY_TOKEN docker.pkg.github.com'
     - 'docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN.$MINOR_VN.$PATCH_VN'
     - 'docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN.$MINOR_VN'
     - 'docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN'
