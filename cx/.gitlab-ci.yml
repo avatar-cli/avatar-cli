@@ -100,7 +100,7 @@ docker_publish:
     GITHUB_REGISTRY_USER: $GITHUB_REGISTRY_USER
     GITHUB_REGISTRY_TOKEN: $GITHUB_REGISTRY_TOKEN
   stage: publish
-  image: 'docker:$DOCKER_IMAGE_VERSION-git'
+  image: '$CI_REGISTRY_IMAGE:latest'
   services:
     - docker:$DOCKER_IMAGE_VERSION-dind
   except:
@@ -110,19 +110,43 @@ docker_publish:
     refs:
       - main
   script:
+    # Activate Avatar-CLI project
+    - avatar install
+    - 'export MAJOR_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts major)'
+    - 'export MINOR_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts minor)'
+    - 'export PATCH_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts patch)'
+
     # Gitlab Registry
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build --build-arg DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION --tag $CI_REGISTRY_IMAGE:latest .
+    - docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN:$MINOR_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN
+    - docker push $CI_REGISTRY_IMAGE:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker push $CI_REGISTRY_IMAGE:$MAJOR_VN:$MINOR_VN
+    - docker push $CI_REGISTRY_IMAGE:$MAJOR_VN
     - docker push $CI_REGISTRY_IMAGE:latest
 
     # Docker Hub Registry
     - docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_TOKEN
+    - docker tag $CI_REGISTRY_IMAGE:latest avatarcli/avatar-cli:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest avatarcli/avatar-cli:$MAJOR_VN:$MINOR_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest avatarcli/avatar-cli:$MAJOR_VN
     - docker tag $CI_REGISTRY_IMAGE:latest avatarcli/avatar-cli:latest
+    - docker push avatarcli/avatar-cli:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker push avatarcli/avatar-cli:$MAJOR_VN:$MINOR_VN
+    - docker push avatarcli/avatar-cli:$MAJOR_VN
     - docker push avatarcli/avatar-cli:latest
 
     # Github Registry
     - docker login -u $GITHUB_REGISTRY_USER -p $GITHUB_REGISTRY_TOKEN
+    - docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN:$MINOR_VN
+    - docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN
     - docker tag $CI_REGISTRY_IMAGE:latest docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:latest
+    - docker push docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN:$MINOR_VN:$PATCH_VN
+    - docker push docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN:$MINOR_VN
+    - docker push docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:$MAJOR_VN
     - docker push docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:latest
   dependencies:
     - build_linux_muslc_release
