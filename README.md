@@ -145,9 +145,12 @@ If you want to use Avatar-CLI in your own CI/CD pipelines, you can rely on the
 generated OCI images. We provide the Avatar-CLI images through three different
 registries:
 
-- **Gitlab CI Registry**: `registry.gitlab.com/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
-- **Github Registry**: `docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
-- **Docker Hub**: `avatarcli/avatar-cli:[ major[.minor[.patch]] | latest ]`
+- **[Gitlab CI Registry](https://gitlab.com/avatar-cli/avatar-cli/container_registry)**:
+  `registry.gitlab.com/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
+- **[Github Registry](https://github.com/avatar-cli/avatar-cli/packages?package_type=Docker)**:
+  `docker.pkg.github.com/avatar-cli/avatar-cli/avatar-cli:[ major[.minor[.patch]] | latest ]`
+- **[Docker Hub](https://hub.docker.com/r/avatarcli/avatar-cli)**:
+  `avatarcli/avatar-cli:[ major[.minor[.patch]] | latest ]`
 
 ## Troubleshooting
 
