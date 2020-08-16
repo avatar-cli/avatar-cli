@@ -152,6 +152,27 @@ registries:
 - **[Docker Hub](https://hub.docker.com/r/avatarcli/avatar-cli)**:
   `avatarcli/avatar-cli:[ major[.minor[.patch]] | latest ]`
 
+## Using Avatar-CLI inside scripts
+
+Given that creating subshells inside scripts may be too cumbersome, you can also
+"source" the output of the `avatar export-env` command.
+
+In Bash scripts, you could do something like this:
+```bash
+#!/bin/bash
+
+source <(avatar export-env)
+```
+
+If you want full compatibility with POSIX shell, then you have to first create a
+file and then source it:
+```bash
+#!/bin/sh
+
+avatar export-env > /your/temporary/file
+. /your/temporary/file
+```
+
 ## Troubleshooting
 
 ### Interactive Git Hooks using tools managed by Avatar-CLI
