@@ -113,11 +113,11 @@ docker_publish:
     # Activate Avatar-CLI project.
     # This is slower than parsing versions with jq, but we want to take the opportunity to test Avatar-CLI, eventually
     # we'll optimize this away once we have proper tests in previous stages.
-    - 'avatar install'
-    - 'cd "${CI_PROJECT_DIR}/cx" && avatar run npm -- install'
-    - 'export MAJOR_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts major)'
-    - 'export MINOR_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts minor)'
-    - 'export PATCH_VN=$(avatar run node -- ./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts patch)'
+    - 'avatar export-env > ./avatar-session-vars && . ./avatar-session-vars && rm ./avatar-session-vars'
+    - 'cd "${CI_PROJECT_DIR}/cx" && npm install'
+    - 'export MAJOR_VN=$(./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts major)'
+    - 'export MINOR_VN=$(./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts minor)'
+    - 'export PATCH_VN=$(./node_modules/.bin/ts-node src/scripts/pkg_version_info.ts patch)'
     - 'cd "${CI_PROJECT_DIR}"'
 
     # Gitlab Registry
