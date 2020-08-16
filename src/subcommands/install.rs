@@ -82,7 +82,7 @@ fn check_etc_passwd_files(
     };
 
     let project_internal_id = project_state.get_project_internal_id();
-    let project_filter = format!("avatar_cli_project={}", project_internal_id);
+    let project_filter = format!("{}.byid.projects.avatar-cli", project_internal_id);
 
     let uid = nix::unistd::getuid();
     let (username, gid) = match nix::unistd::User::from_uid(uid) {
@@ -119,7 +119,7 @@ fn check_etc_passwd_files(
                     "--label",
                     &project_filter,
                     "--label",
-                    "avatar_cli_type=install",
+                    "install_helper.container_role.avatar-cli",
                     &image_ref,
                 ])
                 .output()
@@ -282,7 +282,7 @@ fn check_etc_passwd_files(
             "--filter",
             &format!("label={}", project_filter),
             "--filter",
-            "label=avatar_cli_type=install",
+            "label=install_helper.container_role.avatar-cli",
         ])
         .output()
     {
@@ -474,7 +474,7 @@ fn compile_image_configs(
 }
 
 fn create_volume(volume_name: &str, container_path: &PathBuf, project_internal_id: &str) {
-    let project_filter = format!("avatar_cli_project={}", project_internal_id);
+    let project_filter = format!("{}.byid.projects.avatar-cli", project_internal_id);
 
     match Command::new("docker")
         .args(&[

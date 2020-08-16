@@ -252,6 +252,10 @@ fn run_docker_command(
                 "{}_{}_{}_{}_{}",
                 project_name, program_name, project_internal_id, session_token, process_id
             ),
+            "--label",
+            "managed_tool.container_role.avatar-cli",
+            "--label",
+            &format!("{}.byid.projects.avatar-cli", project_internal_id),
             "--env",
             &format!("{}={}", PROCESS_ID, process_id),
             "--env",
