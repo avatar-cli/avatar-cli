@@ -357,7 +357,7 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        pull_oci_image_by_fqn(format!(
+                        pull_oci_image_by_fqn(&format!(
                             "{}@sha256:{}",
                             image_name,
                             image_config.get_hash()
@@ -623,25 +623,9 @@ fn get_image_config_by_tag(
                     exit(exitcode::PROTOCOL)
                 }
             },
-            false => match Command::new("docker")
-                .args(&["image", "pull", &image_fqn])
-                .status()
-            {
-                Ok(status) => match status.success() {
-                    true => get_image_config_by_tag((image_tag, image_fqn, run_config)),
-                    false => {
-                        eprintln!("Unable to pull OCI image {}", image_fqn);
-                        exit(exitcode::UNAVAILABLE)
-                    }
-                },
-                Err(e) => {
-                    eprintln!(
-                        "Unknow error while trying to pull OCI image {}:\n\n{}\n",
-                        image_fqn,
-                        e.to_string()
-                    );
-                    exit(exitcode::OSERR)
-                }
+            false => {
+                pull_oci_image_by_fqn(&image_fqn);
+                get_image_config_by_tag((image_tag, image_fqn, run_config))
             },
         },
         Err(e) => {
@@ -747,15 +731,23 @@ fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
     recreate_volatile_subdir(volatile_path, "home", changed_state);
 }
 
-fn pull_oci_image_by_fqn(image_ref: String) {
+fn pull_oci_image_by_fqn(image_ref: &str) {
     // This code assumes that the existence of the docker command has been checked before
-    if let Err(err) = Command::new("docker").args(&["pull", &image_ref]).status() {
-        eprintln!(
-            "Unable to pull OCI image {}.\n\n{}\n",
-            image_ref,
-            err.to_string()
-        );
-        exit(exitcode::UNAVAILABLE)
+    match Command::new("docker").args(&["pull", image_ref]).status() {
+        Ok(status) => {
+            if !status.success() {
+                eprintln!("Unable to pull OCI image {}", image_ref);
+                exit(exitcode::UNAVAILABLE)
+            }
+        }
+        Err(err) => {
+            eprintln!(
+                "Unable to pull OCI image {}.\n\n{}\n",
+                image_ref,
+                err.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
     }
 }
 
