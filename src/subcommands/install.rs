@@ -7,7 +7,7 @@
 use std::{
     collections::BTreeMap,
     env,
-    fs::{copy, create_dir_all, remove_dir_all, write},
+    fs::{create_dir_all, remove_dir_all, write},
     os::unix::fs::symlink,
     path::PathBuf,
     process::{exit, Command},
@@ -708,19 +708,8 @@ fn populate_volatile_bin_dir(
         }
     };
 
-    let managed_avatar_path = bin_path.join("avatar");
-
-    if let Err(e) = copy(&avatar_path, &managed_avatar_path) {
-        eprintln!(
-            "Unable to copy avatar binary to {}\n\n{}\n",
-            bin_path.display(),
-            e.to_string()
-        );
-        exit(exitcode::IOERR)
-    }
-
     for binary_name in project_state.get_binary_names() {
-        if symlink(&managed_avatar_path, bin_path.join(binary_name)).is_err() {
+        if symlink(&avatar_path, bin_path.join(binary_name)).is_err() {
             eprintln!("Unable to create symlink to {} binary", binary_name);
             exit(exitcode::CANTCREAT)
         }
