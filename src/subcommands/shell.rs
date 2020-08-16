@@ -55,3 +55,42 @@ pub(crate) fn shell_subcommand() {
         .env(STATE_PATH, project_state_path)
         .exec();
 }
+
+pub(crate) fn export_env_subcommand() {
+    let (project_path, config_path, config_lock_path, project_state_path, project_state) =
+        install_subcommand();
+
+    let path_var = match env::var("PATH") {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "Unable to load PATH environment variable\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    };
+    let avatar_bin_path = project_path
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
+        .join("bin");
+    let path_var = format!("{}:{}", avatar_bin_path.display(), path_var);
+
+    let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+
+    println!("export PATH=\"{}\"", path_var);
+    println!("export {}=\"{}\"", CONFIG_PATH, config_path.display());
+    println!(
+        "export {}=\"{}\"",
+        CONFIG_LOCK_PATH,
+        config_lock_path.display()
+    );
+    println!("export {}=\"{}\"", PROJECT_PATH, project_path.display());
+    println!(
+        "export {}=\"{}\"",
+        PROJECT_INTERNAL_ID,
+        project_state.get_project_internal_id()
+    );
+    println!("export {}=\"{}\"", SESSION_TOKEN, session_token);
+    println!("export {}=\"{}\"", STATE_PATH, project_state_path.display());
+}

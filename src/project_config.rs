@@ -349,9 +349,12 @@ fn generate_volume_name(
 
             match volume_config.scope {
                 VolumeScope::Project => format!("prj_{}_{}", project_internal_id, path_hash),
-                VolumeScope::OCIImage => {
-                    format!("img_{}_{}_{}", project_internal_id, image_ref.replace('/', "."), path_hash)
-                }
+                VolumeScope::OCIImage => format!(
+                    "img_{}_{}_{}",
+                    project_internal_id,
+                    image_ref.replace('/', "."),
+                    path_hash
+                ),
                 VolumeScope::Binary => format!(
                     "bin_{}_{}_{}_{}",
                     project_internal_id, image_ref, binary_name, path_hash

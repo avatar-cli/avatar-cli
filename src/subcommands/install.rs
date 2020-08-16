@@ -107,7 +107,10 @@ fn check_etc_passwd_files(
 
             let install_container_name = format!(
                 "{}_{}_{}_{}_passwd",
-                project_internal_id, image_name.replace('/', "."), image_tag, image_hash
+                project_internal_id,
+                image_name.replace('/', "."),
+                image_tag,
+                image_hash
             );
             match Command::new("docker")
                 .args(&[
@@ -626,7 +629,7 @@ fn get_image_config_by_tag(
             false => {
                 pull_oci_image_by_fqn(&image_fqn);
                 get_image_config_by_tag((image_tag, image_fqn, run_config))
-            },
+            }
         },
         Err(e) => {
             eprintln!(

@@ -19,6 +19,9 @@ pub(crate) fn select() {
     let matches = App::new("avatar")
         .version(AVATAR_CLI_VERSION)
         .setting(AppSettings::SubcommandRequired)
+        .subcommand(SubCommand::with_name("export-env").about(
+            "Prints shell variable exports to create a new Avatar-CLI session. Useful for scripts.",
+        ))
         .subcommand(
             SubCommand::with_name("init")
                 .about("It generates a new Avatar-CLI project configuration")
@@ -52,6 +55,7 @@ pub(crate) fn select() {
     match matches.subcommand_name() {
         Some(subcommand_name) => match subcommand_name {
             "avatar" => exit(exitcode::OK),
+            "export-env" => shell::export_env_subcommand(),
             "init" => {
                 let init_matches = matches.subcommand_matches("init").unwrap();
                 let project_path = match init_matches.value_of("project_path") {
