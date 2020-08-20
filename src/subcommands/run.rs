@@ -307,13 +307,14 @@ fn get_user_integration_args(
         dynamic_args.push(format!("USERNAME={}", user.name));
     }
 
-    if cfg!(target_os = "linux") {
+    #[cfg(target_os = "linux")]
+    {
         push_socket_dir_args("SSH_AUTH_SOCK", &mut dynamic_args);
         push_socket_dir_args("GPG_AGENT_INFO", &mut dynamic_args);
-    } else if cfg!(target_os = "macos") {
-        #[cfg(target_os = "macos")]
-        push_ssh_agent_socket_args(&mut dynamic_args);
     }
+
+    #[cfg(target_os = "macos")]
+    push_ssh_agent_socket_args(&mut dynamic_args);
 
     if let Some(home_dir) = dirs::home_dir() {
         push_home_config_args(&home_dir, ".ssh", &mut dynamic_args);
