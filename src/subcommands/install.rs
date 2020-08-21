@@ -338,7 +338,7 @@ fn check_managed_volume_existence(volume_config: &VolumeConfigLock, project_inte
     }
 }
 
-fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
+fn check_oci_images_availability(project_state: &ProjectConfigLock, show_output: bool) -> bool {
     let images = project_state.get_images();
 
     if which::which("docker").is_err() {
@@ -360,11 +360,10 @@ fn check_oci_images_availability(project_state: &ProjectConfigLock) -> bool {
             match inspect_output {
                 Ok(output) => {
                     if !output.status.success() {
-                        pull_oci_image_by_fqn(&format!(
-                            "{}@sha256:{}",
-                            image_name,
-                            image_config.get_hash()
-                        ));
+                        pull_oci_image_by_fqn(
+                            &format!("{}@sha256:{}", image_name, image_config.get_hash()),
+                            show_output,
+                        );
                         changed_state = true;
                     }
                 }
@@ -388,6 +387,7 @@ fn check_project_settings(
     config_path: &PathBuf,
     config_lock_path: &PathBuf,
     project_state_path: &PathBuf,
+    show_output: bool,
 ) -> (ProjectConfigLock, bool) {
     let mut changed_state = false;
     let (config, config_hash) = get_config(&config_path);
@@ -406,14 +406,14 @@ fn check_project_settings(
 
             if config_hash.as_ref() != &_config_lock.get_project_config_hash()[..] {
                 changed_state = true;
-                generate_config_lock(config_lock_path, &config, &config_hash)
+                generate_config_lock(config_lock_path, &config, &config_hash, show_output)
             } else {
                 (_config_lock, _config_lock_hash)
             }
         }
         false => {
             changed_state = true;
-            generate_config_lock(config_lock_path, &config, &config_hash)
+            generate_config_lock(config_lock_path, &config, &config_hash, show_output)
         }
     };
 
@@ -453,7 +453,7 @@ fn check_project_settings(
 }
 
 fn compile_image_configs(
-    (image_name, image_tags): (&String, &BTreeMap<String, OCIImageConfig>),
+    (image_name, image_tags, show_output): (&String, &BTreeMap<String, OCIImageConfig>, bool),
 ) -> (String, BTreeMap<String, OCIImageConfigLock>) {
     if image_tags.is_empty() {
         eprintln!("No tags are defined for image {}", image_name);
@@ -469,6 +469,7 @@ fn compile_image_configs(
                     image_tag,
                     format!("{}:{}", image_name, image_tag),
                     image_config.get_run_config().clone(),
+                    show_output,
                 )
             })
             .map(get_image_config_by_tag)
@@ -514,8 +515,9 @@ fn generate_config_lock(
     config_lock_path: &PathBuf,
     config: &ProjectConfig,
     config_hash: &Digest,
+    show_output: bool,
 ) -> (ProjectConfigLock, Digest) {
-    let image_configs = get_image_compiled_configs(config);
+    let image_configs = get_image_compiled_configs(config, show_output);
     let binaries_settings = get_binaries_settings(config, &image_configs);
 
     let config_lock = ProjectConfigLock::new(
@@ -595,15 +597,26 @@ fn get_binaries_settings(
 
 fn get_image_compiled_configs(
     config: &ProjectConfig,
+    show_output: bool,
 ) -> BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
     match config.get_images() {
-        Some(images) => images.iter().map(compile_image_configs).collect(),
+        Some(images) => images
+            .iter()
+            .map(|(image_name, image_tags)| {
+                compile_image_configs((image_name, image_tags, show_output))
+            })
+            .collect(),
         None => BTreeMap::new(),
     }
 }
 
 fn get_image_config_by_tag(
-    (image_tag, image_fqn, run_config): (&String, String, Option<OCIContainerRunConfig>),
+    (image_tag, image_fqn, run_config, show_output): (
+        &String,
+        String,
+        Option<OCIContainerRunConfig>,
+        bool,
+    ),
 ) -> (String, OCIImageConfigLock) {
     match Command::new("docker")
         .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
@@ -627,8 +640,8 @@ fn get_image_config_by_tag(
                 }
             },
             false => {
-                pull_oci_image_by_fqn(&image_fqn);
-                get_image_config_by_tag((image_tag, image_fqn, run_config))
+                pull_oci_image_by_fqn(&image_fqn, show_output);
+                get_image_config_by_tag((image_tag, image_fqn, run_config, show_output))
             }
         },
         Err(e) => {
@@ -642,7 +655,9 @@ fn get_image_config_by_tag(
     }
 }
 
-pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, ProjectConfigLock) {
+pub(crate) fn install_subcommand(
+    show_output: bool,
+) -> (PathBuf, PathBuf, PathBuf, PathBuf, ProjectConfigLock) {
     if let Ok(session_token) = env::var(SESSION_TOKEN) {
         eprintln!(
         "You are already in an Avatar CLI session (with token '{}').\nIf the environment changed, consider typing 'exit' and trying again.",
@@ -665,9 +680,13 @@ pub(crate) fn install_subcommand() -> (PathBuf, PathBuf, PathBuf, PathBuf, Proje
     let volatile_path = project_data_path.join(VOLATILE_DIR_NAME);
     let project_state_path = volatile_path.join(STATEFILE_NAME);
 
-    let (project_state, changed_state) =
-        check_project_settings(&config_path, &config_lock_path, &project_state_path);
-    let pulled_oci_images = check_oci_images_availability(&project_state);
+    let (project_state, changed_state) = check_project_settings(
+        &config_path,
+        &config_lock_path,
+        &project_state_path,
+        show_output,
+    );
+    let pulled_oci_images = check_oci_images_availability(&project_state, show_output);
     check_managed_volumes_availability(&project_state);
     populate_volatile_bin_dir(
         &volatile_path,
@@ -723,22 +742,41 @@ fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
     recreate_volatile_subdir(volatile_path, "home", changed_state);
 }
 
-fn pull_oci_image_by_fqn(image_ref: &str) {
+fn pull_oci_image_by_fqn(image_ref: &str, show_output: bool) {
     // This code assumes that the existence of the docker command has been checked before
-    match Command::new("docker").args(&["pull", image_ref]).status() {
-        Ok(status) => {
-            if !status.success() {
-                eprintln!("Unable to pull OCI image {}", image_ref);
-                exit(exitcode::UNAVAILABLE)
+    if show_output {
+        match Command::new("docker").args(&["pull", image_ref]).status() {
+            Ok(status) => {
+                if !status.success() {
+                    eprintln!("Unable to pull OCI image {}", image_ref);
+                    exit(exitcode::UNAVAILABLE)
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "Unable to pull OCI image {}.\n\n{}\n",
+                    image_ref,
+                    err.to_string()
+                );
+                exit(exitcode::OSERR)
             }
         }
-        Err(err) => {
-            eprintln!(
-                "Unable to pull OCI image {}.\n\n{}\n",
-                image_ref,
-                err.to_string()
-            );
-            exit(exitcode::OSERR)
+    } else {
+        match Command::new("docker").args(&["pull", image_ref]).output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    eprintln!("Unable to pull OCI image {}", image_ref);
+                    exit(exitcode::UNAVAILABLE)
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "Unable to pull OCI image {}.\n\n{}\n",
+                    image_ref,
+                    err.to_string()
+                );
+                exit(exitcode::OSERR)
+            }
         }
     }
 }

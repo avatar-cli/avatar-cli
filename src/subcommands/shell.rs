@@ -20,7 +20,7 @@ use crate::{
 
 pub(crate) fn shell_subcommand() {
     let (project_path, config_path, config_lock_path, project_state_path, project_state) =
-        install_subcommand();
+        install_subcommand(true);
 
     let shell_path = match env::var("SHELL") {
         Ok(sp) => sp,
@@ -58,7 +58,7 @@ pub(crate) fn shell_subcommand() {
 
 pub(crate) fn export_env_subcommand() {
     let (project_path, config_path, config_lock_path, project_state_path, project_state) =
-        install_subcommand();
+        install_subcommand(false);
 
     let path_var = match env::var("PATH") {
         Ok(p) => p,
