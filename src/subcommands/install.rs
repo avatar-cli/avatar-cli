@@ -25,8 +25,8 @@ use crate::{
     },
     project_config::{
         get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
-        OCIContainerRunConfig, OCIImageConfig, OCIImageConfigLock, ProjectConfig,
-        ProjectConfigLock, VolumeConfigLock,
+        OCIContainerRunConfig, OCIImageTagConfigLock, ProjectConfig,
+        ProjectConfigLock, VolumeConfigLock, OCIImageConfig,
     },
 };
 
@@ -453,22 +453,24 @@ fn check_project_settings(
 }
 
 fn compile_image_configs(
-    (image_name, image_tags, show_output): (&String, &BTreeMap<String, OCIImageConfig>, bool),
-) -> (String, BTreeMap<String, OCIImageConfigLock>) {
-    if image_tags.is_empty() {
+    (image_name, image_config, show_output): (&String, &OCIImageConfig, bool),
+) -> (String, BTreeMap<String, OCIImageTagConfigLock>) {
+    let tags = image_config.get_tags();
+
+    if tags.is_empty() {
         eprintln!("No tags are defined for image {}", image_name);
         exit(exitcode::DATAERR)
     }
 
     (
         image_name.clone(),
-        image_tags
+        tags
             .iter()
-            .map(|(image_tag, image_config)| {
+            .map(|(image_tag, image_tag_config)| {
                 (
                     image_tag,
                     format!("{}:{}", image_name, image_tag),
-                    image_config.get_run_config().clone(),
+                    image_tag_config.get_run_config().clone(),
                     show_output,
                 )
             })
@@ -533,20 +535,20 @@ fn generate_config_lock(
 
 fn get_binaries_settings(
     config: &ProjectConfig,
-    images_name_tag_hash_rel: &BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>,
+    images_name_tag_hash_rel: &BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>,
 ) -> BTreeMap<String, ImageBinaryConfigLock> {
     let mut dst_binaries: BTreeMap<String, ImageBinaryConfigLock> = BTreeMap::new();
 
     if let Some(images) = config.get_images() {
-        for (image_name, image_tags) in images {
-            for (image_tag, image_config) in image_tags {
-                match image_config.get_binaries() {
+        for (image_name, image_config) in images {
+            for (image_tag, image_tag_config) in image_config.get_tags() {
+                match image_tag_config.get_binaries() {
                     Some(src_binaries) => {
                         for (binary_name, binary_config) in src_binaries {
-                            let image_config = match images_name_tag_hash_rel.get(image_name) {
+                            let image_tag_config = match images_name_tag_hash_rel.get(image_name) {
                                 Some(images_tag_config_rel) => {
                                     match images_tag_config_rel.get(image_tag) {
-                                        Some(_image_config) => _image_config,
+                                        Some(_image_tag_config) => _image_tag_config,
                                         None => {
                                             eprintln!(
                                                 "A theoretically impossible error just happened."
@@ -570,13 +572,13 @@ fn get_binaries_settings(
                                 binary_name.clone(),
                                 ImageBinaryConfigLock::new(
                                     image_name.clone(),
-                                    image_config.get_hash().clone(),
+                                    image_tag_config.get_hash().clone(),
                                     binary_config
                                         .get_path()
                                         .clone()
                                         .unwrap_or(PathBuf::from(binary_name)),
                                     merge_run_configs(
-                                        image_config.get_run_config(),
+                                        image_tag_config.get_run_config(),
                                         binary_config.get_run_config(),
                                         config.get_project_internal_id(),
                                         &format!("{}-{}", image_name, image_tag),
@@ -598,7 +600,7 @@ fn get_binaries_settings(
 fn get_image_compiled_configs(
     config: &ProjectConfig,
     show_output: bool,
-) -> BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
+) -> BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>> {
     match config.get_images() {
         Some(images) => images
             .iter()
@@ -617,7 +619,7 @@ fn get_image_config_by_tag(
         Option<OCIContainerRunConfig>,
         bool,
     ),
-) -> (String, OCIImageConfigLock) {
+) -> (String, OCIImageTagConfigLock) {
     match Command::new("docker")
         .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
         .output()
@@ -627,7 +629,7 @@ fn get_image_config_by_tag(
                 Ok(stdout) => match stdout.trim().split(':').nth(1) {
                     Some(hash) => (
                         image_tag.clone(),
-                        OCIImageConfigLock::new(hash.to_string(), run_config),
+                        OCIImageTagConfigLock::new(hash.to_string(), run_config),
                     ),
                     None => {
                         eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);

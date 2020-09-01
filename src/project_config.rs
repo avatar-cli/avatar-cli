@@ -135,11 +135,24 @@ impl OCIContainerRunConfigLock {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OCIImageConfig {
-    binaries: Option<BTreeMap<String, ImageBinaryConfig>>,
+    tags: BTreeMap<String, OCIImageTagConfig>, //image tag -> oci image tag config
     run_config: Option<OCIContainerRunConfig>,
 }
 
 impl OCIImageConfig {
+    pub fn get_tags(&self) -> &BTreeMap<String, OCIImageTagConfig> {
+        &self.tags
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct OCIImageTagConfig {
+    binaries: Option<BTreeMap<String, ImageBinaryConfig>>,
+    run_config: Option<OCIContainerRunConfig>,
+}
+
+impl OCIImageTagConfig {
     pub fn get_binaries(&self) -> &Option<BTreeMap<String, ImageBinaryConfig>> {
         &self.binaries
     }
@@ -151,14 +164,14 @@ impl OCIImageConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct OCIImageConfigLock {
+pub(crate) struct OCIImageTagConfigLock {
     hash: String,
     run_config: Option<OCIContainerRunConfig>,
 }
 
-impl OCIImageConfigLock {
-    pub fn new(hash: String, run_config: Option<OCIContainerRunConfig>) -> OCIImageConfigLock {
-        OCIImageConfigLock { hash, run_config }
+impl OCIImageTagConfigLock {
+    pub fn new(hash: String, run_config: Option<OCIContainerRunConfig>) -> OCIImageTagConfigLock {
+        OCIImageTagConfigLock { hash, run_config }
     }
 
     pub fn get_hash(&self) -> &String {
@@ -175,7 +188,7 @@ impl OCIImageConfigLock {
 pub(crate) struct ProjectConfig {
     version: String,
     project_internal_id: String,
-    images: Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>>, // image name -> image tag -> oci image config
+    images: Option<BTreeMap<String, OCIImageConfig>>, // image name -> "tags" -> image tag -> oci image tag config
 }
 
 impl ProjectConfig {
@@ -193,7 +206,7 @@ impl ProjectConfig {
         &self.project_internal_id
     }
 
-    pub fn get_images(&self) -> &Option<BTreeMap<String, BTreeMap<String, OCIImageConfig>>> {
+    pub fn get_images(&self) -> &Option<BTreeMap<String, OCIImageConfig>> {
         &self.images
     }
 }
@@ -204,7 +217,7 @@ pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     project_config_hash: Vec<u8>,
     project_internal_id: String,
-    images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>, // image_name -> image_tag -> image config & hash
+    images: BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>, // image_name -> image_tag -> image config & hash
     binaries: BTreeMap<String, ImageBinaryConfigLock>,
 }
 
@@ -222,7 +235,7 @@ impl ProjectConfigLock {
         &self.project_internal_id
     }
 
-    pub fn get_images(&self) -> &BTreeMap<String, BTreeMap<String, OCIImageConfigLock>> {
+    pub fn get_images(&self) -> &BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>> {
         &self.images
     }
 
@@ -245,7 +258,7 @@ impl ProjectConfigLock {
     pub fn new(
         project_config_hash: Vec<u8>,
         project_internal_id: String,
-        images: BTreeMap<String, BTreeMap<String, OCIImageConfigLock>>,
+        images: BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>,
         binaries: BTreeMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {
