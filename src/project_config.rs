@@ -83,6 +83,7 @@ impl ImageBinaryConfigLock {
 pub(crate) struct OCIContainerRunConfig {
     env: Option<BTreeMap<String, String>>,
     env_from_host: Option<BTreeSet<String>>,
+    extra_paths: Option<BTreeSet<PathBuf>>,
     volumes: Option<BTreeMap<PathBuf, VolumeConfig>>, // container path -> volume config
     bindings: Option<BTreeMap<PathBuf, PathBuf>>,     // container path -> host path
 }
@@ -94,6 +95,10 @@ impl OCIContainerRunConfig {
 
     pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
         &self.env_from_host
+    }
+
+    pub fn get_extra_paths(&self) -> &Option<BTreeSet<PathBuf>> {
+        &self.extra_paths
     }
 
     pub fn get_volumes(&self) -> &Option<BTreeMap<PathBuf, VolumeConfig>> {
@@ -110,6 +115,7 @@ impl OCIContainerRunConfig {
 pub(crate) struct OCIContainerRunConfigLock {
     env: Option<BTreeMap<String, String>>,
     env_from_host: Option<BTreeSet<String>>,
+    extra_paths: Option<BTreeSet<PathBuf>>,
     volumes: Option<Vec<VolumeConfigLock>>,
     bindings: Option<BTreeMap<PathBuf, PathBuf>>,
 }
@@ -121,6 +127,10 @@ impl OCIContainerRunConfigLock {
 
     pub fn get_env_from_host(&self) -> &Option<BTreeSet<String>> {
         &self.env_from_host
+    }
+
+    pub fn get_extra_paths(&self) -> &Option<BTreeSet<PathBuf>> {
+        &self.extra_paths
     }
 
     pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
@@ -519,6 +529,21 @@ fn merge_envs_from_host(
     }
 }
 
+fn merge_extra_paths(
+    base_extra_paths: &Option<BTreeSet<PathBuf>>,
+    new_extra_paths: &Option<BTreeSet<PathBuf>>,
+) -> Option<BTreeSet<PathBuf>> {
+    match base_extra_paths {
+        Some(_base_extra_paths) => match new_extra_paths {
+            Some(_new_extra_paths) => {
+                Some(_base_extra_paths.union(_new_extra_paths).cloned().collect())
+            }
+            None => base_extra_paths.clone(),
+        },
+        None => new_extra_paths.clone(),
+    }
+}
+
 pub(crate) fn merge_run_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
@@ -542,6 +567,10 @@ pub(crate) fn merge_run_configs(
                     _base_config.get_env_from_host(),
                     _new_config.get_env_from_host(),
                 ),
+                extra_paths: merge_extra_paths(
+                    _base_config.get_extra_paths(),
+                    _new_config.get_extra_paths(),
+                ),
             }),
             None => Some(OCIContainerRunConfigLock {
                 bindings: _base_config.bindings.clone(),
@@ -553,6 +582,7 @@ pub(crate) fn merge_run_configs(
                 ),
                 env: _base_config.env.clone(),
                 env_from_host: _base_config.env_from_host.clone(),
+                extra_paths: _base_config.extra_paths.clone(),
             }),
         },
         None => match new_config {
@@ -566,6 +596,7 @@ pub(crate) fn merge_run_configs(
                 ),
                 env: _new_config.env.clone(),
                 env_from_host: _new_config.env_from_host.clone(),
+                extra_paths: _new_config.extra_paths.clone(),
             }),
             None => Option::<OCIContainerRunConfigLock>::None,
         },

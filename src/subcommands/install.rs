@@ -25,8 +25,8 @@ use crate::{
     },
     project_config::{
         get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
-        OCIContainerRunConfig, OCIImageTagConfigLock, ProjectConfig,
-        ProjectConfigLock, VolumeConfigLock, OCIImageConfig,
+        OCIContainerRunConfig, OCIImageConfig, OCIImageTagConfigLock, ProjectConfig,
+        ProjectConfigLock, VolumeConfigLock,
     },
 };
 
@@ -464,8 +464,7 @@ fn compile_image_configs(
 
     (
         image_name.clone(),
-        tags
-            .iter()
+        tags.iter()
             .map(|(image_tag, image_tag_config)| {
                 (
                     image_tag,
