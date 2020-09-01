@@ -21,7 +21,7 @@ boilerplate_checks:
 
 test:
   stage: test
-  image: 'rust:1.45-stretch'
+  image: 'rust:1-stretch'
   except:
     refs:
       - dev
@@ -52,13 +52,13 @@ test:
 build_linux_glibc_release:
   <<: *build_linux_release
   variables:
-    RUST_DOCKER_TAG: 1.45-stretch
+    RUST_DOCKER_TAG: 1-stretch
     LIBC_TYPE: glibc
 
 build_linux_muslc_release:
   <<: *build_linux_release
   variables:
-    RUST_DOCKER_TAG: 1.45-alpine3.11
+    RUST_DOCKER_TAG: 1-alpine3.11
     LIBC_TYPE: muslc
   before_script:
     - apk add gcc g++
@@ -79,7 +79,7 @@ gitlab_publish:
 
 crates_publish:
   stage: publish
-  image: 'rust:1.45-stretch'
+  image: 'rust:1-stretch'
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
