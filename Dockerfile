@@ -1,7 +1,4 @@
 
-# TODO: Remove default value
-ARG DOCKER_IMAGE_VERSION
-
-FROM docker:$DOCKER_IMAGE_VERSION-git
+FROM registry.gitlab.com/avatar-cli/avatar-cli/docker:git
 
 COPY ./target/release/avatar /usr/bin/avatar

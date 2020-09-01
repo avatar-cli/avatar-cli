@@ -21,7 +21,7 @@ boilerplate_checks:
 
 test:
   stage: test
-  image: 'rust:1-stretch'
+  image: '$CI_REGISTRY_IMAGE/rust:1-stretch'
   except:
     refs:
       - dev
@@ -33,7 +33,7 @@ test:
 
 .build_linux_release: &build_linux_release
   stage: build_release
-  image: 'rust:$RUST_DOCKER_TAG'
+  image: '$CI_REGISTRY_IMAGE/rust:$RUST_DOCKER_TAG'
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
@@ -79,7 +79,7 @@ gitlab_publish:
 
 crates_publish:
   stage: publish
-  image: 'rust:1-stretch'
+  image: '$CI_REGISTRY_IMAGE/rust:1-stretch'
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
@@ -94,7 +94,6 @@ crates_publish:
 
 docker_publish:
   variables:
-    DOCKER_IMAGE_VERSION: '19.03.12'
     DOCKER_HUB_USER: $DOCKER_HUB_USER
     DOCKER_HUB_TOKEN: $DOCKER_HUB_TOKEN
     GITHUB_REGISTRY_USER: $GITHUB_REGISTRY_USER
@@ -102,7 +101,7 @@ docker_publish:
   stage: publish
   image: '$CI_REGISTRY_IMAGE:latest'
   services:
-    - docker:$DOCKER_IMAGE_VERSION-dind
+    - $CI_REGISTRY_IMAGE/docker:dind
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
@@ -122,7 +121,7 @@ docker_publish:
 
     # Gitlab Registry
     - 'docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY'
-    - 'docker build --build-arg DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION --tag $CI_REGISTRY_IMAGE:latest .'
+    - 'docker build --tag $CI_REGISTRY_IMAGE:latest .'
     - 'docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN.$MINOR_VN.$PATCH_VN'
     - 'docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN.$MINOR_VN'
     - 'docker tag $CI_REGISTRY_IMAGE:latest $CI_REGISTRY_IMAGE:$MAJOR_VN'
