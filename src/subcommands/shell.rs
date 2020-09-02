@@ -58,6 +58,15 @@ pub(crate) fn shell_subcommand() {
         .join("bin");
     let extra_paths = shell_extra_paths
         .iter()
+        .map(|p| {
+            if p.is_absolute() {
+                p.clone()
+            } else {
+                project_path.join(p)
+            }
+        })
+        .collect::<Vec<PathBuf>>()
+        .iter()
         .map(|p| p.to_str())
         .filter(|p| p.is_some())
         .map(|p| p.unwrap())
