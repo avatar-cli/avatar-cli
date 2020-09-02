@@ -1,27 +1,30 @@
 ---
-projectConfigHash: 8468a49d9a56a635bd0235fd37aaba1eb53c693d22f2a2e915370c892fea246d
+projectConfigHash: 10f490d892bd270eb9d3dffb3cd76f7fdd70bf7da0291592c69bbc7541fd6ef7
 projectInternalId: v2ZmtbkGuVdvGwVE
+shellConfig: ~
 images:
-  node:
+  registry.gitlab.com/avatar-cli/avatar-cli/node:
     14-buster:
-      hash: a4eb766856965225d23e7f1e75dd8b7114f1c10e0e70b058211f8628620a1a4f
+      hash: 9dc00221a5af301ec5665a452089a13907f96f1b6d13a78fec8f5fa35ef66f37
       runConfig:
         env:
           npm_config_cache: /caches/.npm
         envFromHost:
           - NPM_TOKEN
+        extraPaths: ~
         volumes:
           /caches/.npm:
             name: ~
             scope: Project
         bindings: ~
-  rust:
-    1.45-stretch:
-      hash: 5cc6a12ecb898eb730349358ee6f679cbd3f437fdf6a608bf56d2d8e9ea444dd
+  registry.gitlab.com/avatar-cli/avatar-cli/rust:
+    1-buster:
+      hash: 43d8494fee08f15b4cd6b369d24805b46ea685b886d4b1e9e8b8fd1b0f47c79a
       runConfig:
         env:
           CARGO_HOME: /caches/.cargo
         envFromHost: ~
+        extraPaths: ~
         volumes:
           /caches/.cargo:
             name: ~
@@ -29,65 +32,70 @@ images:
         bindings: ~
 binaries:
   cargo:
-    ociImageName: rust
-    ociImageHash: 5cc6a12ecb898eb730349358ee6f679cbd3f437fdf6a608bf56d2d8e9ea444dd
+    ociImageName: registry.gitlab.com/avatar-cli/avatar-cli/rust
+    ociImageHash: 43d8494fee08f15b4cd6b369d24805b46ea685b886d4b1e9e8b8fd1b0f47c79a
     path: cargo
     runConfig:
       env:
         CARGO_HOME: /caches/.cargo
       envFromHost: ~
+      extraPaths: ~
       volumes:
         - containerPath: /caches/.cargo
           volumeName: prj_v2ZmtbkGuVdvGwVE_23871e86f8681b039cffcca6b1b5f6fe
       bindings: ~
   node:
-    ociImageName: node
-    ociImageHash: a4eb766856965225d23e7f1e75dd8b7114f1c10e0e70b058211f8628620a1a4f
+    ociImageName: registry.gitlab.com/avatar-cli/avatar-cli/node
+    ociImageHash: 9dc00221a5af301ec5665a452089a13907f96f1b6d13a78fec8f5fa35ef66f37
     path: node
     runConfig:
       env:
         npm_config_cache: /caches/.npm
       envFromHost:
         - NPM_TOKEN
+      extraPaths: ~
       volumes:
         - containerPath: /caches/.npm
           volumeName: prj_v2ZmtbkGuVdvGwVE_d3055d24fd594ec026f4dad7c8772525
       bindings: ~
   npm:
-    ociImageName: node
-    ociImageHash: a4eb766856965225d23e7f1e75dd8b7114f1c10e0e70b058211f8628620a1a4f
+    ociImageName: registry.gitlab.com/avatar-cli/avatar-cli/node
+    ociImageHash: 9dc00221a5af301ec5665a452089a13907f96f1b6d13a78fec8f5fa35ef66f37
     path: npm
     runConfig:
       env:
         npm_config_cache: /caches/.npm
       envFromHost:
         - NPM_TOKEN
+      extraPaths: ~
       volumes:
         - containerPath: /caches/.npm
           volumeName: prj_v2ZmtbkGuVdvGwVE_d3055d24fd594ec026f4dad7c8772525
       bindings: ~
   npx:
-    ociImageName: node
-    ociImageHash: a4eb766856965225d23e7f1e75dd8b7114f1c10e0e70b058211f8628620a1a4f
+    ociImageName: registry.gitlab.com/avatar-cli/avatar-cli/node
+    ociImageHash: 9dc00221a5af301ec5665a452089a13907f96f1b6d13a78fec8f5fa35ef66f37
     path: npx
     runConfig:
       env:
         npm_config_cache: /caches/.npm
       envFromHost:
         - NPM_TOKEN
+      extraPaths: ~
       volumes:
         - containerPath: /caches/.npm
           volumeName: prj_v2ZmtbkGuVdvGwVE_d3055d24fd594ec026f4dad7c8772525
       bindings: ~
   yarn:
-    ociImageName: node
-    ociImageHash: a4eb766856965225d23e7f1e75dd8b7114f1c10e0e70b058211f8628620a1a4f
+    ociImageName: registry.gitlab.com/avatar-cli/avatar-cli/node
+    ociImageHash: 9dc00221a5af301ec5665a452089a13907f96f1b6d13a78fec8f5fa35ef66f37
     path: yarn
     runConfig:
       env:
         npm_config_cache: /caches/.npm
       envFromHost:
         - NPM_TOKEN
+      extraPaths: ~
       volumes:
         - containerPath: /caches/.npm
           volumeName: prj_v2ZmtbkGuVdvGwVE_d3055d24fd594ec026f4dad7c8772525

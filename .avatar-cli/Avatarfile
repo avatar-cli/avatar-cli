@@ -1,8 +1,8 @@
 ---
-version: '0.15.0'
+avatarVersion: '0.17.0'
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
-  node:
+  registry.gitlab.com/avatar-cli/avatar-cli/node:
     tags:
       14-buster:
         runConfig:
@@ -19,9 +19,9 @@ images:
           npx: {}
           yarn: {}
 
-  rust:
+  registry.gitlab.com/avatar-cli/avatar-cli/rust:
     tags:
-      1.45-stretch:
+      1-buster:
         runConfig:
           env:
             CARGO_HOME: /caches/.cargo
