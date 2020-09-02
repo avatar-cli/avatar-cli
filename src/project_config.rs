@@ -129,10 +129,6 @@ impl OCIContainerRunConfigLock {
         &self.env_from_host
     }
 
-    pub fn get_extra_paths(&self) -> &Option<BTreeSet<PathBuf>> {
-        &self.extra_paths
-    }
-
     pub fn get_volumes(&self) -> &Option<Vec<VolumeConfigLock>> {
         &self.volumes
     }
@@ -196,8 +192,10 @@ impl OCIImageTagConfigLock {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProjectConfig {
-    version: String,
+    avatar_version: String,
     project_internal_id: String,
+    run_config: Option<OCIContainerRunConfig>,
+    shell_config: Option<ShellConfig>,
     images: Option<BTreeMap<String, OCIImageConfig>>, // image name -> "tags" -> image tag -> oci image tag config
 }
 
@@ -206,10 +204,16 @@ impl ProjectConfig {
         let prj_internal_id: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
 
         ProjectConfig {
-            version: AVATAR_CLI_VERSION.to_string(),
+            avatar_version: AVATAR_CLI_VERSION.to_string(),
+            run_config: None,
+            shell_config: None,
             project_internal_id: prj_internal_id,
             images: None,
         }
+    }
+
+    pub fn get_shell_config(&self) -> &Option<ShellConfig> {
+        &self.shell_config
     }
 
     pub fn get_project_internal_id(&self) -> &String {
@@ -227,6 +231,7 @@ pub(crate) struct ProjectConfigLock {
     #[serde(with = "hex")]
     project_config_hash: Vec<u8>,
     project_internal_id: String,
+    shell_config: Option<ShellConfig>,
     images: BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>, // image_name -> image_tag -> image config & hash
     binaries: BTreeMap<String, ImageBinaryConfigLock>,
 }
@@ -243,6 +248,10 @@ impl ProjectConfigLock {
 
     pub fn get_project_internal_id(&self) -> &String {
         &self.project_internal_id
+    }
+
+    pub fn get_shell_config(&self) -> &Option<ShellConfig> {
+        &self.shell_config
     }
 
     pub fn get_images(&self) -> &BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>> {
@@ -268,15 +277,34 @@ impl ProjectConfigLock {
     pub fn new(
         project_config_hash: Vec<u8>,
         project_internal_id: String,
+        shell_config: Option<ShellConfig>,
         images: BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>,
         binaries: BTreeMap<String, ImageBinaryConfigLock>,
     ) -> ProjectConfigLock {
         ProjectConfigLock {
             project_config_hash,
             project_internal_id,
+            shell_config,
             images,
             binaries,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ShellConfig {
+    env: Option<BTreeMap<String, String>>,
+    extra_paths: Option<BTreeSet<PathBuf>>,
+}
+
+impl ShellConfig {
+    pub fn get_env(&self) -> &Option<BTreeMap<String, String>> {
+        &self.env
+    }
+
+    pub fn get_extra_paths(&self) -> &Option<BTreeSet<PathBuf>> {
+        &self.extra_paths
     }
 }
 

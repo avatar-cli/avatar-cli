@@ -24,11 +24,13 @@ use crate::{
         CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
     },
     project_config::{
-        get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfigLock,
-        OCIContainerRunConfig, OCIImageConfig, OCIImageTagConfigLock, ProjectConfig,
-        ProjectConfigLock, VolumeConfigLock,
+        get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfig,
+        ImageBinaryConfigLock, OCIContainerRunConfig, OCIImageConfig, OCIImageTagConfigLock,
+        ProjectConfig, ProjectConfigLock, VolumeConfigLock,
     },
 };
+
+const ERROR_MSG_DOCKER_INSPECT_OUTPUT: &str = "The command `docker inspect` returned an unexpected output";
 
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
@@ -467,8 +469,8 @@ fn compile_image_configs(
         tags.iter()
             .map(|(image_tag, image_tag_config)| {
                 (
+                    image_name,
                     image_tag,
-                    format!("{}:{}", image_name, image_tag),
                     image_tag_config.get_run_config().clone(),
                     show_output,
                 )
@@ -524,6 +526,7 @@ fn generate_config_lock(
     let config_lock = ProjectConfigLock::new(
         Vec::<u8>::from(config_hash.as_ref()),
         config.get_project_internal_id().clone(),
+        config.get_shell_config().clone(),
         image_configs,
         binaries_settings,
     );
@@ -540,56 +543,13 @@ fn get_binaries_settings(
 
     if let Some(images) = config.get_images() {
         for (image_name, image_config) in images {
-            for (image_tag, image_tag_config) in image_config.get_tags() {
-                match image_tag_config.get_binaries() {
-                    Some(src_binaries) => {
-                        for (binary_name, binary_config) in src_binaries {
-                            let image_tag_config = match images_name_tag_hash_rel.get(image_name) {
-                                Some(images_tag_config_rel) => {
-                                    match images_tag_config_rel.get(image_tag) {
-                                        Some(_image_tag_config) => _image_tag_config,
-                                        None => {
-                                            eprintln!(
-                                                "A theoretically impossible error just happened."
-                                            );
-                                            exit(exitcode::SOFTWARE)
-                                        }
-                                    }
-                                }
-                                None => {
-                                    eprintln!("A theoretically impossible error just happened.");
-                                    exit(exitcode::SOFTWARE)
-                                }
-                            };
-
-                            if dst_binaries.contains_key(binary_name) {
-                                eprintln!("Duplicated binary definition for '{}'", binary_name);
-                                exit(exitcode::DATAERR)
-                            }
-
-                            dst_binaries.insert(
-                                binary_name.clone(),
-                                ImageBinaryConfigLock::new(
-                                    image_name.clone(),
-                                    image_tag_config.get_hash().clone(),
-                                    binary_config
-                                        .get_path()
-                                        .clone()
-                                        .unwrap_or(PathBuf::from(binary_name)),
-                                    merge_run_configs(
-                                        image_tag_config.get_run_config(),
-                                        binary_config.get_run_config(),
-                                        config.get_project_internal_id(),
-                                        &format!("{}-{}", image_name, image_tag),
-                                        binary_name,
-                                    ),
-                                ),
-                            );
-                        }
-                    }
-                    None => { /* Do nothing */ }
-                }
-            }
+            set_binaries_settings_from_image_tags(
+                &mut dst_binaries,
+                image_name,
+                image_config,
+                config,
+                images_name_tag_hash_rel,
+            );
         }
     }
 
@@ -612,48 +572,65 @@ fn get_image_compiled_configs(
 }
 
 fn get_image_config_by_tag(
-    (image_tag, image_fqn, run_config, show_output): (
+    (image_name, image_tag, run_config, show_output): (
         &String,
-        String,
+        &String,
         Option<OCIContainerRunConfig>,
         bool,
     ),
 ) -> (String, OCIImageTagConfigLock) {
+    let image_fqn = format!("{}:{}", image_name, image_tag);
+
     match Command::new("docker")
-        .args(&["inspect", "--format={{index .RepoDigests 0}}", &image_fqn])
+        .args(&["inspect", "--format={{range .RepoDigests}}{{println .}}{{end}}", &image_fqn])
         .output()
     {
         Ok(output) => match output.status.success() {
             true => match from_utf8(&output.stdout) {
-                Ok(stdout) => match stdout.trim().split(':').nth(1) {
-                    Some(hash) => (
-                        image_tag.clone(),
-                        OCIImageTagConfigLock::new(hash.to_string(), run_config),
-                    ),
-                    None => {
-                        eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output", image_fqn);
-                        exit(exitcode::PROTOCOL)
-                    }
+                Ok(stdout) => {
+                    let hash = get_hash_from_repo_digests_str(stdout, image_name);
+                    (image_tag.clone(), OCIImageTagConfigLock::new(hash, run_config))
                 },
                 Err(e) => {
-                    eprintln!("The command `docker inspect --format='{{index .RepoDigests 0}}' {}` returned an unexpected output.\n\n{}\n", image_fqn, e.to_string());
+                    eprintln!("{}.\n\n{}\n", ERROR_MSG_DOCKER_INSPECT_OUTPUT, e.to_string());
                     exit(exitcode::PROTOCOL)
                 }
             },
             false => {
                 pull_oci_image_by_fqn(&image_fqn, show_output);
-                get_image_config_by_tag((image_tag, image_fqn, run_config, show_output))
+                get_image_config_by_tag((image_name, image_tag, run_config, show_output))
             }
         },
         Err(e) => {
             eprintln!(
                 "Unknow error while trying to inspect OCI image {}:\n\n{}\n",
-                image_fqn,
+                &image_fqn,
                 e.to_string()
             );
             exit(exitcode::OSERR)
         }
     }
+}
+
+fn get_hash_from_repo_digests_str(repo_difests_str: &str, image_name: &str) -> String {
+    let repo_digests = repo_difests_str.trim().split('\n');
+
+    for repo_digest in repo_digests {
+        if let Some(repo_digest_name) = repo_digest.split('@').next() {
+            if repo_digest_name == image_name {
+                match repo_digest.split(':').nth(1) {
+                    Some(hash) => return hash.to_string(),
+                    None => {
+                        eprintln!("{}", ERROR_MSG_DOCKER_INSPECT_OUTPUT);
+                        exit(exitcode::PROTOCOL)
+                    }
+                }
+            }
+        }
+    }
+
+    eprintln!("{}", ERROR_MSG_DOCKER_INSPECT_OUTPUT);
+    exit(exitcode::PROTOCOL)
 }
 
 pub(crate) fn install_subcommand(
@@ -818,6 +795,79 @@ fn recreate_volatile_subdir(
     }
 
     Some(subdir_path)
+}
+
+fn set_binaries_settings_from_binaries_defs(
+    dst_binaries: &mut BTreeMap<String, ImageBinaryConfigLock>,
+    image_name: &String,
+    image_tag: &str,
+    src_binaries: &BTreeMap<String, ImageBinaryConfig>,
+    config: &ProjectConfig,
+    images_name_tag_hash_rel: &BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>,
+) {
+    for (binary_name, binary_config) in src_binaries {
+        let image_tag_config = match images_name_tag_hash_rel.get(image_name) {
+            Some(images_tag_config_rel) => match images_tag_config_rel.get(image_tag) {
+                Some(_image_tag_config) => _image_tag_config,
+                None => {
+                    eprintln!("A theoretically impossible error just happened.");
+                    exit(exitcode::SOFTWARE)
+                }
+            },
+            None => {
+                eprintln!("A theoretically impossible error just happened.");
+                exit(exitcode::SOFTWARE)
+            }
+        };
+
+        if dst_binaries.contains_key(binary_name) {
+            eprintln!("Duplicated binary definition for '{}'", binary_name);
+            exit(exitcode::DATAERR)
+        }
+
+        dst_binaries.insert(
+            binary_name.clone(),
+            ImageBinaryConfigLock::new(
+                image_name.clone(),
+                image_tag_config.get_hash().clone(),
+                binary_config
+                    .get_path()
+                    .clone()
+                    .unwrap_or(PathBuf::from(binary_name)),
+                merge_run_configs(
+                    image_tag_config.get_run_config(),
+                    binary_config.get_run_config(),
+                    config.get_project_internal_id(),
+                    &format!("{}-{}", image_name, image_tag),
+                    binary_name,
+                ),
+            ),
+        );
+    }
+}
+
+fn set_binaries_settings_from_image_tags(
+    dst_binaries: &mut BTreeMap<String, ImageBinaryConfigLock>,
+    image_name: &String,
+    image_config: &OCIImageConfig,
+    config: &ProjectConfig,
+    images_name_tag_hash_rel: &BTreeMap<String, BTreeMap<String, OCIImageTagConfigLock>>,
+) {
+    for (image_tag, image_tag_config) in image_config.get_tags() {
+        match image_tag_config.get_binaries() {
+            Some(src_binaries) => {
+                set_binaries_settings_from_binaries_defs(
+                    dst_binaries,
+                    image_name,
+                    image_tag,
+                    src_binaries,
+                    config,
+                    images_name_tag_hash_rel,
+                );
+            }
+            None => { /* Do nothing */ }
+        }
+    }
 }
 
 fn update_project_state(

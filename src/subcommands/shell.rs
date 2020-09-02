@@ -6,7 +6,11 @@
 
 use std::env;
 use std::os::unix::process::CommandExt; // Brings trait that allows us to use exec
-use std::process::{exit, Command};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::PathBuf,
+    process::{exit, Command},
+};
 
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
@@ -27,6 +31,17 @@ pub(crate) fn shell_subcommand() {
         Err(_) => "/bin/sh".to_string(),
     };
 
+    let (shell_env, shell_extra_paths) = match project_state.get_shell_config() {
+        Some(shell_config) => (
+            shell_config.get_env().clone().unwrap_or_default(),
+            shell_config.get_extra_paths().clone().unwrap_or_default(),
+        ),
+        None => (
+            BTreeMap::<String, String>::new(),
+            BTreeSet::<PathBuf>::new(),
+        ),
+    };
+
     let path_var = match env::var("PATH") {
         Ok(p) => p,
         Err(e) => {
@@ -41,11 +56,19 @@ pub(crate) fn shell_subcommand() {
         .join(CONFIG_DIR_NAME)
         .join(VOLATILE_DIR_NAME)
         .join("bin");
-    let path_var = format!("{}:{}", avatar_bin_path.display(), path_var);
+    let extra_paths = shell_extra_paths
+        .iter()
+        .map(|p| p.to_str())
+        .filter(|p| p.is_some())
+        .map(|p| p.unwrap())
+        .collect::<Vec<&str>>()
+        .join(":");
+    let path_var = format!("{}:{}:{}", avatar_bin_path.display(), extra_paths, path_var);
 
     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
 
     Command::new(shell_path)
+        .envs(shell_env)
         .env("PATH", path_var)
         .env(CONFIG_PATH, config_path)
         .env(CONFIG_LOCK_PATH, config_lock_path)
