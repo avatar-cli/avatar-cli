@@ -21,7 +21,7 @@ boilerplate_checks:
 
 test:
   stage: test
-  image: '$CI_REGISTRY_IMAGE/rust:1-stretch'
+  image: '$CI_REGISTRY_IMAGE/rust:1-buster'
   except:
     refs:
       - dev
@@ -52,7 +52,7 @@ test:
 build_linux_glibc_release:
   <<: *build_linux_release
   variables:
-    RUST_DOCKER_TAG: 1-stretch
+    RUST_DOCKER_TAG: 1-buster
     LIBC_TYPE: glibc
 
 build_linux_muslc_release:
@@ -79,7 +79,7 @@ gitlab_publish:
 
 crates_publish:
   stage: publish
-  image: '$CI_REGISTRY_IMAGE/rust:1-stretch'
+  image: '$CI_REGISTRY_IMAGE/rust:1-buster'
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
