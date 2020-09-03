@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Avatar-CLI is a statically-liked single-binary command line tool meant to ease
+Avatar-CLI is a statically-linked single-binary command line tool meant to ease
 the development forkflow in many ways:
   - Making possible version-pinning for any kind of tool used in any kind of
     project. No need for complex setups or ultra-specific tools like
@@ -74,6 +74,18 @@ avatarVersion: '0.17.0'
 # This value is used (among other things) to keep track of managed volumes and
 # containers
 projectInternalId: v2ZmtbkGuVdvGwVE
+
+# The field shellConfig is optional, it allows you to define some settings for
+# the Avatar-CLI subshell (started via `avatar shell`).
+shellConfig:
+  # You can define environment variables for the subshell
+  env:
+    SOME_ENV_VAR: 42
+  # In the case of the $PATH environment variable, Avatar-CLI forbids declaring
+  # it through the `env` field, but you can extend it adding multiple paths to
+  # the `extraPaths` field.
+  extraPaths:
+    - ./bin
 
 # In this section we declare the OCI images that we'll use in our project
 images:
