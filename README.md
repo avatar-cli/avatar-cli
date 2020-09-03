@@ -119,9 +119,11 @@ shellConfig:
     SOME_ENV_VAR: 42
   # In the case of the $PATH environment variable, Avatar-CLI forbids declaring
   # it through the `env` field, but you can extend it adding multiple paths to
-  # the `extraPaths` field.
+  # the `extraPaths` field. This can be useful if you want to access tools
+  # provided by some package manager, like `npm` or `composer`, as if they were
+  # installed globally.
   extraPaths:
-    - ./bin
+    - ./node_modules/.bin
 
 # In this section we declare the OCI images that we'll use in our project
 images:
