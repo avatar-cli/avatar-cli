@@ -2,14 +2,26 @@
 
 [![Pipeline Status]][Dev Commits] [![Latest Version]][crates.io] ![License]
 
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [Why](#why)
+3. [How to install Avatar-CLI](#how-to-install-avatar-cli)
+4. [How to use Avatar-CLI](#how-to-use-avatar-cli)
+5. [Using Avatar-CLI in CI/CD pipelines](#using-avatar-cli-in-cicd-pipelines)
+6. [Using Avatar-CLI inside scripts](#using-avatar-cli-inside-scripts)
+7. [Troubleshooting](#troubleshooting)
+
 ## Introduction
 
-Avatar-CLI is a statically-linked single-binary command line tool meant to ease
-the development forkflow in many ways:
+Avatar-CLI is a command line tool that allows you to run thousands of cli
+programs for your dev projects without having to install them in your system.
+
+Avatar-CLI can ease the development forkflow in many ways:
   - Making possible version-pinning for any kind of tool used in any kind of
     project. No need for complex setups or ultra-specific tools like
     [`nvm`](https://github.com/nvm-sh/nvm),
-    [`nodenev`](https://ekalinin.github.io/nodeenv/),
+    [`nodeenv`](https://ekalinin.github.io/nodeenv/),
     [`pyenv`](https://github.com/pyenv/pyenv),
     [`rbenv`](https://github.com/rbenv/rbenv),
     [`goenv`](https://github.com/syndbg/goenv),
@@ -19,7 +31,30 @@ the development forkflow in many ways:
     minute, reducing the bootstrap/setup time to almost zero. Only `git` and
     `docker` are required.
 
+## Why?
+
+Why Avatar-CLI exists and what problems it tries to solve?
+
+- Avatar-CLI was created to shorten setup time of development environments to
+  near-zero.
+- Avatar-CLI lets each project define its development environment as code and
+  share it through source control as a configuration file. See the
+  [Avatarfile example](#avatarfile-example).
+
+Problems solved by Avatar-CLI and surrounding practices:
+
+- *Works on my machine* - With Avatar-CLI, each developer (and/or CI agent) gets
+  a consistent and reproducible environment built with a combination of docker
+  images.
+- Avatar-CLI helps to fight configuration drift. Tools and configurations in the
+  CI/CD environments and developers' environments tend to accumulate differences
+  and mismatches over time. Avatar-CLI allows using exactly the same tools,
+  having a single source of truth for their configuration.
+
+
 ## How to install Avatar-CLI
+
+First, [install docker](https://docs.docker.com/install/), if you haven't already.
 
 ### Downloading pre-compiled binaries
 
@@ -31,14 +66,15 @@ binaries for Macos.
 ### Via Cargo
 
 If you want to use Avatar-CLi in Macos, or you don't mind waiting a little bit
-more for its compilation, you can use `cargo` to install it:
+more for its compilation, you can use
+[`cargo`](https://doc.rust-lang.org/cargo/)**¹** to install it:
 
 ```bash
 cargo install avatar-cli
 ```
 
-If you don't have `cargo` in your system, you can obtain it via
-[rustup](https://rustup.rs/).
+1: If you don't have [`cargo`](https://doc.rust-lang.org/cargo/) in your system,
+you can obtain it via [rustup](https://rustup.rs/).
 
 ## How to use Avatar-CLI
 
@@ -64,7 +100,7 @@ avatar shell
 # was not installed in your system.
 ```
 
-Configuration example:
+Configuration example:<a id="avatarfile-example"></a>
 ```yaml
 ---
 # This is of no use... for now, but it must be there
