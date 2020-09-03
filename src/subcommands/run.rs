@@ -16,8 +16,8 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
 use crate::directories::{
-    check_if_inside_project_dir, get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME,
-    CONFIG_DIR_NAME, CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
+    check_if_inside_project_dir, get_project_path, is_inside_project_dir, AVATARFILE_LOCK_NAME,
+    AVATARFILE_NAME, CONFIG_DIR_NAME, CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
 };
 use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
 
@@ -284,8 +284,29 @@ fn run_docker_command(
         .args(get_user_integration_args(uid, &image_ref, project_path))
         .arg(&image_ref)
         .arg(binary_configuration.get_path())
-        .args(env::args().skip(skip_args))
+        .args(transform_command_args(skip_args, project_path))
         .exec(); // Only for UNIX
+}
+
+fn transform_command_args(skip_args: usize, project_path: &PathBuf) -> impl Iterator<Item = String> {
+    let project_path = project_path.clone();
+
+    env::args().skip(skip_args).map(move |arg| {
+        let potential_path = PathBuf::from(&arg);
+        if potential_path.is_absolute() && is_inside_project_dir(&project_path, &potential_path) {
+            match potential_path.strip_prefix(&project_path) {
+                Ok(relative_path) => {
+                    match PathBuf::from("/playground").join(relative_path).to_str() {
+                        Some(stringified_path) => stringified_path.to_string(),
+                        None => arg,
+                    }
+                }
+                Err(_) => arg,
+            }
+        } else {
+            arg
+        }
+    })
 }
 
 fn get_user_integration_args(

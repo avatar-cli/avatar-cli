@@ -30,7 +30,8 @@ use crate::{
     },
 };
 
-const ERROR_MSG_DOCKER_INSPECT_OUTPUT: &str = "The command `docker inspect` returned an unexpected output";
+const ERROR_MSG_DOCKER_INSPECT_OUTPUT: &str =
+    "The command `docker inspect` returned an unexpected output";
 
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
@@ -582,17 +583,28 @@ fn get_image_config_by_tag(
     let image_fqn = format!("{}:{}", image_name, image_tag);
 
     match Command::new("docker")
-        .args(&["inspect", "--format={{range .RepoDigests}}{{println .}}{{end}}", &image_fqn])
+        .args(&[
+            "inspect",
+            "--format={{range .RepoDigests}}{{println .}}{{end}}",
+            &image_fqn,
+        ])
         .output()
     {
         Ok(output) => match output.status.success() {
             true => match from_utf8(&output.stdout) {
                 Ok(stdout) => {
                     let hash = get_hash_from_repo_digests_str(stdout, image_name);
-                    (image_tag.clone(), OCIImageTagConfigLock::new(hash, run_config))
-                },
+                    (
+                        image_tag.clone(),
+                        OCIImageTagConfigLock::new(hash, run_config),
+                    )
+                }
                 Err(e) => {
-                    eprintln!("{}.\n\n{}\n", ERROR_MSG_DOCKER_INSPECT_OUTPUT, e.to_string());
+                    eprintln!(
+                        "{}.\n\n{}\n",
+                        ERROR_MSG_DOCKER_INSPECT_OUTPUT,
+                        e.to_string()
+                    );
                     exit(exitcode::PROTOCOL)
                 }
             },

@@ -15,6 +15,17 @@ pub(crate) const CONTAINER_HOME_PATH: &str = "/home/avatar-cli";
 pub(crate) const STATEFILE_NAME: &str = "state.yml";
 pub(crate) const VOLATILE_DIR_NAME: &str = "volatile";
 
+pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) {
+    if !is_inside_project_dir(project_path, current_dir) {
+        eprintln!(
+            "The configured project directory is '{}', but you are in '{}'",
+            project_path.display(),
+            current_dir.display()
+        );
+        exit(exitcode::USAGE)
+    }
+}
+
 pub(crate) fn get_project_path() -> Option<PathBuf> {
     let current_dir = match env::current_dir() {
         Ok(p) => p,
@@ -34,7 +45,7 @@ pub(crate) fn get_project_path() -> Option<PathBuf> {
     None
 }
 
-pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) {
+pub(crate) fn is_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) -> bool {
     let mut in_project_dir = false;
     for ancestor in current_dir.ancestors() {
         if ancestor == project_path {
@@ -42,12 +53,5 @@ pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &
             break;
         }
     }
-    if !in_project_dir {
-        eprintln!(
-            "The configured project directory is '{}', but you are in '{}'",
-            project_path.display(),
-            current_dir.display()
-        );
-        exit(exitcode::USAGE)
-    }
+    in_project_dir
 }
