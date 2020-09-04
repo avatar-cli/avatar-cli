@@ -19,16 +19,23 @@ use crate::avatar_env::{
 };
 use crate::{
     directories::{CONFIG_DIR_NAME, VOLATILE_DIR_NAME},
+    project_config::ProjectConfigLock,
     subcommands::install::install_subcommand,
 };
 
-pub(crate) fn shell_subcommand() {
-    let (project_path, config_path, config_lock_path, project_state_path, project_state) =
-        install_subcommand(true);
-
-    let shell_path = match env::var("SHELL") {
-        Ok(sp) => sp,
-        Err(_) => "/bin/sh".to_string(),
+fn get_path_and_extra_env(
+    project_state: &ProjectConfigLock,
+    project_path: &PathBuf,
+) -> (String, BTreeMap<String, String>) {
+    let path_var = match env::var("PATH") {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "Unable to load PATH environment variable\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
     };
 
     let (shell_env, shell_extra_paths) = match project_state.get_shell_config() {
@@ -42,20 +49,6 @@ pub(crate) fn shell_subcommand() {
         ),
     };
 
-    let path_var = match env::var("PATH") {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!(
-                "Unable to load PATH environment variable\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    };
-    let avatar_bin_path = project_path
-        .join(CONFIG_DIR_NAME)
-        .join(VOLATILE_DIR_NAME)
-        .join("bin");
     let extra_paths = shell_extra_paths
         .iter()
         .map(|p| {
@@ -72,44 +65,28 @@ pub(crate) fn shell_subcommand() {
         .map(|p| p.unwrap())
         .collect::<Vec<&str>>()
         .join(":");
-    let path_var = format!("{}:{}:{}", avatar_bin_path.display(), extra_paths, path_var);
 
-    let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    let avatar_bin_path = project_path
+        .join(CONFIG_DIR_NAME)
+        .join(VOLATILE_DIR_NAME)
+        .join("bin");
 
-    Command::new(shell_path)
-        .envs(shell_env)
-        .env("PATH", path_var)
-        .env(CONFIG_PATH, config_path)
-        .env(CONFIG_LOCK_PATH, config_lock_path)
-        .env(PROJECT_PATH, project_path)
-        .env(PROJECT_INTERNAL_ID, project_state.get_project_internal_id())
-        .env(SESSION_TOKEN, session_token)
-        .env(STATE_PATH, project_state_path)
-        .exec();
+    (
+        format!("{}:{}:{}", avatar_bin_path.display(), extra_paths, path_var),
+        shell_env,
+    )
 }
 
 pub(crate) fn export_env_subcommand() {
     let (project_path, config_path, config_lock_path, project_state_path, project_state) =
         install_subcommand(false);
 
-    let path_var = match env::var("PATH") {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!(
-                "Unable to load PATH environment variable\n\n{}\n",
-                e.to_string()
-            );
-            exit(exitcode::OSERR)
-        }
-    };
-    let avatar_bin_path = project_path
-        .join(CONFIG_DIR_NAME)
-        .join(VOLATILE_DIR_NAME)
-        .join("bin");
-    let path_var = format!("{}:{}", avatar_bin_path.display(), path_var);
-
+    let (path_var, shell_env) = get_path_and_extra_env(&project_state, &project_path);
     let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
 
+    for (shell_var_name, shell_var_value) in shell_env {
+        println!("export {}=\"{}\"", shell_var_name, shell_var_value);
+    }
     println!("export PATH=\"{}\"", path_var);
     println!("export {}=\"{}\"", CONFIG_PATH, config_path.display());
     println!(
@@ -125,4 +102,28 @@ pub(crate) fn export_env_subcommand() {
     );
     println!("export {}=\"{}\"", SESSION_TOKEN, session_token);
     println!("export {}=\"{}\"", STATE_PATH, project_state_path.display());
+}
+
+pub(crate) fn shell_subcommand() {
+    let (project_path, config_path, config_lock_path, project_state_path, project_state) =
+        install_subcommand(true);
+
+    let (path_var, shell_env) = get_path_and_extra_env(&project_state, &project_path);
+    let session_token: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+
+    let shell_path = match env::var("SHELL") {
+        Ok(sp) => sp,
+        Err(_) => "/bin/sh".to_string(),
+    };
+
+    Command::new(shell_path)
+        .envs(shell_env)
+        .env("PATH", path_var)
+        .env(CONFIG_PATH, config_path)
+        .env(CONFIG_LOCK_PATH, config_lock_path)
+        .env(PROJECT_PATH, project_path)
+        .env(PROJECT_INTERNAL_ID, project_state.get_project_internal_id())
+        .env(SESSION_TOKEN, session_token)
+        .env(STATE_PATH, project_state_path)
+        .exec();
 }

@@ -288,7 +288,10 @@ fn run_docker_command(
         .exec(); // Only for UNIX
 }
 
-fn transform_command_args(skip_args: usize, project_path: &PathBuf) -> impl Iterator<Item = String> {
+fn transform_command_args(
+    skip_args: usize,
+    project_path: &PathBuf,
+) -> impl Iterator<Item = String> {
     let project_path = project_path.clone();
 
     env::args().skip(skip_args).map(move |arg| {
