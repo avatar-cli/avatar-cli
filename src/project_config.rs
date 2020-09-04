@@ -15,7 +15,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use ring::digest::{digest, Digest, SHA256};
 use serde::{Deserialize, Serialize};
 
-use crate::subcommands::AVATAR_CLI_VERSION;
+use crate::{docker::get_path_env_var_from_oci_image, subcommands::AVATAR_CLI_VERSION};
 
 // Constants:
 // -----------------------------------------------------------------------------
@@ -354,6 +354,51 @@ impl VolumeScope {
 // Functions:
 // -----------------------------------------------------------------------------
 
+fn check_against_forbidden_path_var(
+    shell_config: &ShellConfig,
+    run_config_lock: &OCIContainerRunConfigLock,
+) {
+    if let Some(_shell_env) = &shell_config.env {
+        if _shell_env.contains_key("PATH") {
+            eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+            exit(exitcode::USAGE)
+        }
+    }
+    if let Some(_env) = &run_config_lock.env {
+        if _env.contains_key("PATH") {
+            eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+            exit(exitcode::USAGE)
+        }
+    }
+    if let Some(_env_from_host) = &run_config_lock.env_from_host {
+        if _env_from_host.contains("PATH") {
+            eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+            exit(exitcode::USAGE)
+        }
+    }
+}
+
+fn customize_oci_image_path_env_var(
+    oci_image_path: &str,
+    extra_paths: &BTreeSet<PathBuf>,
+) -> String {
+    let playground_path = PathBuf::from("/playground");
+
+    let filtered_extra_paths = extra_paths
+        .iter()
+        .filter(|p| p.is_relative())
+        .map(|p| playground_path.join(p))
+        .collect::<Vec<PathBuf>>()
+        .iter()
+        .map(|p| p.to_str())
+        .filter(|p| p.is_some())
+        .map(|p| p.unwrap())
+        .collect::<Vec<&str>>()
+        .join(":");
+
+    format!("{}:{}", filtered_extra_paths, oci_image_path)
+}
+
 fn generate_volume_config_lock(
     image_volume_configs: &Option<BTreeMap<PathBuf, VolumeConfig>>,
     project_internal_id: &str,
@@ -577,15 +622,107 @@ fn merge_extra_paths(
     }
 }
 
-pub(crate) fn merge_run_configs(
+pub(crate) fn merge_run_and_shell_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
     shell_config: &Option<ShellConfig>,
     project_internal_id: &str,
-    image_ref: &str,
+    image_name: &str,
+    image_tag: &str,
+    image_hash: &str,
     binary_name: &str,
 ) -> Option<OCIContainerRunConfigLock> {
-    let mut merged_run_config = match base_config {
+    let mut merged_run_config = merge_run_configs(
+        base_config,
+        new_config,
+        project_internal_id,
+        image_name,
+        image_tag,
+        binary_name,
+    );
+
+    match shell_config {
+        Some(_shell_config) => match &mut merged_run_config {
+            Some(_merged_run_config) => {
+                check_against_forbidden_path_var(_shell_config, _merged_run_config);
+
+                _merged_run_config.env = merge_envs(&_shell_config.env, &_merged_run_config.env);
+
+                if let Some(_extra_paths) = &_shell_config.extra_paths {
+                    if let Some(oci_image_path) = get_path_env_var_from_oci_image(&format!(
+                        "{}@sha256:{}",
+                        image_name, image_hash
+                    )) {
+                        let customized_path =
+                            customize_oci_image_path_env_var(&oci_image_path, _extra_paths);
+
+                        match &mut _merged_run_config.env {
+                            Some(_env) => {
+                                _env.insert("PATH".to_string(), customized_path);
+                            }
+                            None => {
+                                let mut _env = BTreeMap::<String, String>::new();
+                                _env.insert("PATH".to_string(), customized_path);
+                                _merged_run_config.env = Some(_env);
+                            }
+                        }
+                    }
+                }
+
+                merged_run_config
+            }
+            None => {
+                if let Some(_shell_env) = &_shell_config.env {
+                    if _shell_env.contains_key("PATH") {
+                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+                        exit(exitcode::USAGE)
+                    }
+                }
+
+                let _env = match &_shell_config.extra_paths {
+                    Some(_extra_paths) => {
+                        if let Some(oci_image_path) = get_path_env_var_from_oci_image(&format!(
+                            "{}@sha256:{}",
+                            image_name, image_hash
+                        )) {
+                            let customized_path =
+                                customize_oci_image_path_env_var(&oci_image_path, _extra_paths);
+                            let mut _env = BTreeMap::<String, String>::new();
+                            _env.insert("PATH".to_string(), customized_path);
+                            Some(_env)
+                        } else {
+                            _shell_config.env.clone()
+                        }
+                    }
+                    None => _shell_config.env.clone(),
+                };
+
+                Some(OCIContainerRunConfigLock {
+                    env: _env,
+                    env_from_host: None,
+                    // Notice that `extra_paths` are not the ones provided by
+                    // shellConfig, and are not exposed yet as a final feature
+                    extra_paths: None,
+                    bindings: None,
+                    volumes: None,
+                })
+            }
+        },
+        None => merged_run_config,
+    }
+}
+
+fn merge_run_configs(
+    base_config: &Option<OCIContainerRunConfig>,
+    new_config: &Option<OCIContainerRunConfig>,
+    project_internal_id: &str,
+    image_name: &str,
+    image_tag: &str,
+    binary_name: &str,
+) -> Option<OCIContainerRunConfigLock> {
+    let image_ref_for_docker_objs_labels = format!("{}-{}", image_name, image_tag);
+
+    match base_config {
         Some(_base_config) => match new_config {
             Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
@@ -593,7 +730,7 @@ pub(crate) fn merge_run_configs(
                     _base_config.get_volumes(),
                     _new_config.get_volumes(),
                     project_internal_id,
-                    image_ref,
+                    &image_ref_for_docker_objs_labels,
                     binary_name,
                 ),
                 env: merge_envs(_base_config.get_env(), _new_config.get_env()),
@@ -611,7 +748,7 @@ pub(crate) fn merge_run_configs(
                 volumes: generate_volume_config_lock(
                     &_base_config.volumes,
                     project_internal_id,
-                    image_ref,
+                    &image_ref_for_docker_objs_labels,
                     binary_name,
                 ),
                 env: _base_config.env.clone(),
@@ -625,7 +762,7 @@ pub(crate) fn merge_run_configs(
                 volumes: generate_volume_config_lock(
                     &_new_config.volumes,
                     project_internal_id,
-                    image_ref,
+                    &image_ref_for_docker_objs_labels,
                     binary_name,
                 ),
                 env: _new_config.env.clone(),
@@ -634,39 +771,6 @@ pub(crate) fn merge_run_configs(
             }),
             None => Option::<OCIContainerRunConfigLock>::None,
         },
-    };
-
-    match shell_config {
-        Some(_shell_config) => match &mut merged_run_config {
-            Some(_merged_run_config) => {
-                if let Some(_shell_env) = &_shell_config.env {
-                    if _shell_env.contains_key("PATH") {
-                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
-                        exit(exitcode::USAGE)
-                    }
-                }
-                if let Some(_env) = &_merged_run_config.env {
-                    if _env.contains_key("PATH") {
-                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
-                        exit(exitcode::USAGE)
-                    }
-                }
-                if let Some(_env_from_host) = &_merged_run_config.env_from_host {
-                    if _env_from_host.contains("PATH") {
-                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
-                        exit(exitcode::USAGE)
-                    }
-                }
-
-                _merged_run_config.env = merge_envs(&_shell_config.env, &_merged_run_config.env);
-
-                merged_run_config
-            }
-            None => {
-                merged_run_config // TODO
-            }
-        },
-        None => merged_run_config,
     }
 }
 

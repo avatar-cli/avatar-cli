@@ -23,15 +23,13 @@ use crate::{
         get_project_path, AVATARFILE_LOCK_NAME, AVATARFILE_NAME, CONFIG_DIR_NAME,
         CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
     },
+    docker::ERROR_MSG_DOCKER_INSPECT_OUTPUT,
     project_config::{
-        get_config, get_config_lock, merge_run_configs, save_config_lock, ImageBinaryConfig,
-        ImageBinaryConfigLock, OCIContainerRunConfig, OCIImageConfig, OCIImageTagConfigLock,
-        ProjectConfig, ProjectConfigLock, VolumeConfigLock,
+        get_config, get_config_lock, merge_run_and_shell_configs, save_config_lock,
+        ImageBinaryConfig, ImageBinaryConfigLock, OCIContainerRunConfig, OCIImageConfig,
+        OCIImageTagConfigLock, ProjectConfig, ProjectConfigLock, VolumeConfigLock,
     },
 };
-
-const ERROR_MSG_DOCKER_INSPECT_OUTPUT: &str =
-    "The command `docker inspect` returned an unexpected output";
 
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
@@ -846,12 +844,14 @@ fn set_binaries_settings_from_binaries_defs(
                     .get_path()
                     .clone()
                     .unwrap_or(PathBuf::from(binary_name)),
-                merge_run_configs(
+                merge_run_and_shell_configs(
                     image_tag_config.get_run_config(),
                     binary_config.get_run_config(),
                     config.get_shell_config(),
                     config.get_project_internal_id(),
-                    &format!("{}-{}", image_name, image_tag),
+                    image_name,
+                    image_tag,
+                    image_tag_config.get_hash(),
                     binary_name,
                 ),
             ),

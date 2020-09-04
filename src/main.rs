@@ -6,6 +6,7 @@
 
 mod avatar_env;
 mod directories;
+mod docker;
 mod project_config;
 mod subcommands;
 
