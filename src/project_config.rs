@@ -17,6 +17,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::subcommands::AVATAR_CLI_VERSION;
 
+// Constants:
+// -----------------------------------------------------------------------------
+pub(crate) const ERROR_MSG_FORBIDDEN_PATH_ENV_VAR: &str =
+    "Passing a custom PATH environment variable is forbidden";
+
 // Structs, Enums & their Impl blocks:
 // -----------------------------------------------------------------------------
 
@@ -575,11 +580,12 @@ fn merge_extra_paths(
 pub(crate) fn merge_run_configs(
     base_config: &Option<OCIContainerRunConfig>,
     new_config: &Option<OCIContainerRunConfig>,
+    shell_config: &Option<ShellConfig>,
     project_internal_id: &str,
     image_ref: &str,
     binary_name: &str,
 ) -> Option<OCIContainerRunConfigLock> {
-    match base_config {
+    let mut merged_run_config = match base_config {
         Some(_base_config) => match new_config {
             Some(_new_config) => Some(OCIContainerRunConfigLock {
                 bindings: merge_bindings(_base_config.get_bindings(), _new_config.get_bindings()),
@@ -628,6 +634,39 @@ pub(crate) fn merge_run_configs(
             }),
             None => Option::<OCIContainerRunConfigLock>::None,
         },
+    };
+
+    match shell_config {
+        Some(_shell_config) => match &mut merged_run_config {
+            Some(_merged_run_config) => {
+                if let Some(_shell_env) = &_shell_config.env {
+                    if _shell_env.contains_key("PATH") {
+                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+                        exit(exitcode::USAGE)
+                    }
+                }
+                if let Some(_env) = &_merged_run_config.env {
+                    if _env.contains_key("PATH") {
+                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+                        exit(exitcode::USAGE)
+                    }
+                }
+                if let Some(_env_from_host) = &_merged_run_config.env_from_host {
+                    if _env_from_host.contains("PATH") {
+                        eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
+                        exit(exitcode::USAGE)
+                    }
+                }
+
+                _merged_run_config.env = merge_envs(&_shell_config.env, &_merged_run_config.env);
+
+                merged_run_config
+            }
+            None => {
+                merged_run_config // TODO
+            }
+        },
+        None => merged_run_config,
     }
 }
 

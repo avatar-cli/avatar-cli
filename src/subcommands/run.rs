@@ -19,7 +19,9 @@ use crate::directories::{
     check_if_inside_project_dir, get_project_path, is_inside_project_dir, AVATARFILE_LOCK_NAME,
     AVATARFILE_NAME, CONFIG_DIR_NAME, CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
 };
-use crate::project_config::{get_config, get_config_lock, ImageBinaryConfigLock};
+use crate::project_config::{
+    get_config, get_config_lock, ImageBinaryConfigLock, ERROR_MSG_FORBIDDEN_PATH_ENV_VAR,
+};
 
 pub(crate) fn run_subcommand() {
     let project_path = match get_project_path() {
@@ -161,7 +163,7 @@ fn run_docker_command(
         if let Some(used_defined_env_vars) = run_config.get_env() {
             for (var_name, var_value) in used_defined_env_vars {
                 if var_name == "PATH" {
-                    eprintln!("Passing a custom PATH environment variable is forbidden");
+                    eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
                     exit(exitcode::USAGE)
                 }
 
@@ -173,7 +175,7 @@ fn run_docker_command(
         if let Some(host_var_names) = run_config.get_env_from_host() {
             for var_name in host_var_names {
                 if var_name == "PATH" {
-                    eprintln!("Passing a custom PATH environment variable is forbidden");
+                    eprintln!("{}", ERROR_MSG_FORBIDDEN_PATH_ENV_VAR);
                     exit(exitcode::USAGE)
                 }
 

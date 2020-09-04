@@ -849,6 +849,7 @@ fn set_binaries_settings_from_binaries_defs(
                 merge_run_configs(
                     image_tag_config.get_run_config(),
                     binary_config.get_run_config(),
+                    config.get_shell_config(),
                     config.get_project_internal_id(),
                     &format!("{}-{}", image_name, image_tag),
                     binary_name,
