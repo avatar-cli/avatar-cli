@@ -99,9 +99,11 @@ docker_publish:
     GITHUB_REGISTRY_USER: $GITHUB_REGISTRY_USER
     GITHUB_REGISTRY_TOKEN: $GITHUB_REGISTRY_TOKEN
   stage: publish
-  image: '$CI_REGISTRY_IMAGE:latest'
+  image:
+    name: '$CI_REGISTRY_IMAGE:latest'
   services:
-    - $CI_REGISTRY_IMAGE/docker:dind
+    - name: '$CI_REGISTRY_IMAGE/docker:dind'
+      alias: docker
   except:
     refs:
       - /^v[0-9]+\.[0-9]+\.[0-9]+$/
