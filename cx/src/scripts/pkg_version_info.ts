@@ -1,5 +1,10 @@
 #!/usr/bin/env ts-node-script
 
+/*
+ *  Copyright (C) 2019-2020  Andres Correa Casablanca
+ *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
+ */
+
 import { getCxEnvVars } from '../lib/cxEnv'
 import { getPackageJsonVersionFromCommit } from '../lib/version'
 

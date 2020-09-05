@@ -1,5 +1,10 @@
 #!/usr/bin/env ts-node-script
 
+/*
+ *  Copyright (C) 2019-2020  Andres Correa Casablanca
+ *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
+ */
+
 import fetch from 'node-fetch'
 
 import { getCxEnvVars } from '../lib/cxEnv'
