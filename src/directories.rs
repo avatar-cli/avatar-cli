@@ -4,6 +4,7 @@
  *  License: GPL 3.0 (See the LICENSE file in the repository root directory)
  */
 
+use crate::avatar_env::FORCE_PROJECT_PATH;
 use std::env;
 use std::path::PathBuf;
 use std::process::exit;
@@ -16,6 +17,10 @@ pub(crate) const STATEFILE_NAME: &str = "state.yml";
 pub(crate) const VOLATILE_DIR_NAME: &str = "volatile";
 
 pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &PathBuf) {
+    if env::var(FORCE_PROJECT_PATH).is_ok() {
+        return;
+    }
+
     if !is_inside_project_dir(project_path, current_dir) {
         eprintln!(
             "The configured project directory is '{}', but you are in '{}'",
@@ -27,6 +32,10 @@ pub(crate) fn check_if_inside_project_dir(project_path: &PathBuf, current_dir: &
 }
 
 pub(crate) fn get_project_path() -> Option<PathBuf> {
+    if let Ok(project_path) = env::var(FORCE_PROJECT_PATH) {
+        return Some(PathBuf::from(project_path));
+    }
+
     let current_dir = match env::current_dir() {
         Ok(p) => p,
         Err(_) => {

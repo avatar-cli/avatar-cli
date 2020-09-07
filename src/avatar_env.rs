@@ -10,6 +10,7 @@ use std::process::exit;
 
 pub(crate) const CONFIG_LOCK_PATH: &str = "AVATAR_CLI_CONFIG_LOCK_PATH";
 pub(crate) const CONFIG_PATH: &str = "AVATAR_CLI_CONFIG_PATH";
+pub(crate) const FORCE_PROJECT_PATH: &str = "AVATAR_CLI_FORCE_PROJECT_PATH";
 pub(crate) const PROCESS_ID: &str = "AVATAR_CLI_PROCESS_ID";
 pub(crate) const PROJECT_PATH: &str = "AVATAR_CLI_PROJECT_PATH";
 pub(crate) const PROJECT_INTERNAL_ID: &str = "AVATAR_CLI_PROJECT_INTERNAL_ID";

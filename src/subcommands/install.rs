@@ -31,7 +31,7 @@ use crate::{
     },
 };
 
-const BIN_WRAPPER_TMPL: &'static [u8; 703] = include_bytes!("../embedded_files/bin_wrapper.sh");
+const BIN_WRAPPER_TMPL: &'static [u8; 755] = include_bytes!("../embedded_files/bin_wrapper.sh");
 
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
@@ -684,6 +684,7 @@ pub(crate) fn install_subcommand(
         pulled_oci_images || changed_state,
     );
     populate_volatile_wrappers_dir(
+        &project_path,
         &volatile_path,
         &project_state,
         pulled_oci_images || changed_state,
@@ -738,6 +739,7 @@ fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
 }
 
 fn populate_volatile_wrappers_dir(
+    project_path: &PathBuf,
     volatile_path: &PathBuf,
     project_state: &ProjectConfigLock,
     changed_state: bool,
@@ -766,10 +768,19 @@ fn populate_volatile_wrappers_dir(
         }
     };
 
+    let project_path = match project_path.to_str() {
+        Some(p) => p.to_string(),
+        None => {
+            eprintln!("The project path contains non-utf8 characters that are not supported");
+            exit(exitcode::SOFTWARE)
+        }
+    };
+
     // We can safely unwrap because we know the string at compile time
     let wrapper_content = from_utf8(BIN_WRAPPER_TMPL)
         .unwrap()
-        .replace("/the/magic/avatar/path", &avatar_path);
+        .replace("/avatar/bin/path", &avatar_path)
+        .replace("/avatar/prj/path", &project_path);
     let wrapper_content = wrapper_content.as_bytes();
 
     for binary_name in project_state.get_binary_names() {

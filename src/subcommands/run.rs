@@ -14,7 +14,9 @@ use std::{
 
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
-use crate::avatar_env::{AvatarEnv, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN};
+use crate::avatar_env::{
+    AvatarEnv, FORCE_PROJECT_PATH, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN,
+};
 use crate::directories::{
     check_if_inside_project_dir, get_project_path, is_inside_project_dir, AVATARFILE_LOCK_NAME,
     AVATARFILE_NAME, CONFIG_DIR_NAME, CONTAINER_HOME_PATH, STATEFILE_NAME, VOLATILE_DIR_NAME,
@@ -200,10 +202,14 @@ fn run_docker_command(
     }
 
     let working_dir = match current_dir.strip_prefix(project_path) {
-        Ok(wd) => wd,
+        Ok(wd) => wd.to_path_buf(),
         Err(_) => {
-            eprintln!("A precondition of run_docker_command does not hold: working directory inside project directory");
-            exit(exitcode::SOFTWARE)
+            if env::var(FORCE_PROJECT_PATH).is_ok() {
+                PathBuf::from("") // We loose some guarantees in this corner case ‾\_('')_/‾
+            } else {
+                eprintln!("A precondition of run_docker_command does not hold: working directory inside project directory");
+                exit(exitcode::SOFTWARE)
+            }
         }
     };
 

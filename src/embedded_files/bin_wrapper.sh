@@ -14,7 +14,9 @@ if command -v avatar > /dev/null; then
   # shellcheck disable=SC2155
   AVATAR_CLI_BIN="$(command -v avatar)";
 else
-  AVATAR_CLI_BIN="/the/magic/avatar/path";
+  AVATAR_CLI_BIN="/avatar/bin/path";
 fi
+
+export AVATAR_CLI_FORCE_PROJECT_PATH="/avatar/prj/path";
 
 exec "${AVATAR_CLI_BIN}" run "${0##*/}" -- "$@";
