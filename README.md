@@ -10,7 +10,8 @@
 4. [How to use Avatar-CLI](#how-to-use-avatar-cli)
 5. [Using Avatar-CLI in CI/CD pipelines](#using-avatar-cli-in-cicd-pipelines)
 6. [Using Avatar-CLI inside scripts](#using-avatar-cli-inside-scripts)
-7. [Troubleshooting](#troubleshooting)
+7. [Using Avatar-CLI with Jetbrains IDEs](#using-avatar-cli-with-jetbrains-ides)
+8. [Troubleshooting](#troubleshooting)
 
 ## Introduction
 
@@ -222,6 +223,19 @@ file and then source it:
 avatar export-env > /your/temporary/file
 . /your/temporary/file
 ```
+
+## Using Avatar-CLI with Jetbrains IDEs
+
+When using your preferred IDE, sometimes you have to specify the path of certain
+interpreters like Python or PHP.
+
+For that, Avatar-CLI generates wrapper scripts in the directory
+`.avatar-cli/volatile/wrappers` of your project, and you can tell your IDE to
+find the interpreters there.
+
+As a side note, notice that there is a similar directory
+(`.avatar-cli/volatile/bin`), this is where the symbolic links used by
+`avatar shell` are, and they won't work with your IDE.
 
 ## Troubleshooting
 
