@@ -1,5 +1,5 @@
 ---
-avatarVersion: '0.17.0'
+avatarVersion: '0.18.0'
 projectInternalId: v2ZmtbkGuVdvGwVE
 images:
   registry.gitlab.com/avatar-cli/avatar-cli/node:

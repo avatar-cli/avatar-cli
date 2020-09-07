@@ -31,6 +31,8 @@ use crate::{
     },
 };
 
+const BIN_WRAPPER_TMPL: &'static [u8; 703] = include_bytes!("../embedded_files/bin_wrapper.sh");
+
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
         .args(&[
@@ -681,6 +683,11 @@ pub(crate) fn install_subcommand(
         &project_state,
         pulled_oci_images || changed_state,
     );
+    populate_volatile_wrappers_dir(
+        &volatile_path,
+        &project_state,
+        pulled_oci_images || changed_state,
+    );
     populate_volatile_home_dir(&volatile_path, pulled_oci_images || changed_state);
     check_etc_passwd_files(
         &volatile_path,
@@ -728,6 +735,53 @@ fn populate_volatile_bin_dir(
 
 fn populate_volatile_home_dir(volatile_path: &PathBuf, changed_state: bool) {
     recreate_volatile_subdir(volatile_path, "home", changed_state);
+}
+
+fn populate_volatile_wrappers_dir(
+    volatile_path: &PathBuf,
+    project_state: &ProjectConfigLock,
+    changed_state: bool,
+) {
+    let wrappers_path = match recreate_volatile_subdir(volatile_path, "wrappers", changed_state) {
+        Some(_wrappers_path) => _wrappers_path,
+        None => return,
+    };
+
+    let avatar_path = match env::current_exe() {
+        Ok(p) => match p.to_str() {
+            Some(_p) => _p.to_string(),
+            None => {
+                eprintln!(
+                    "The path to `avatar` contains non-utf8 characters that are not supported"
+                );
+                exit(exitcode::SOFTWARE)
+            }
+        },
+        Err(e) => {
+            eprintln!(
+                "Unable to retrieve avatar's binary path.\n\n{}\n",
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
+        }
+    };
+
+    // We can safely unwrap because we know the string at compile time
+    let wrapper_content = from_utf8(BIN_WRAPPER_TMPL)
+        .unwrap()
+        .replace("/the/magic/avatar/path", &avatar_path);
+    let wrapper_content = wrapper_content.as_bytes();
+
+    for binary_name in project_state.get_binary_names() {
+        if let Err(e) = write(wrappers_path.join(binary_name), wrapper_content) {
+            eprintln!(
+                "Unable to create wrapper script for {}\n\n{}\n",
+                binary_name,
+                e.to_string()
+            );
+            exit(exitcode::CANTCREAT)
+        }
+    }
 }
 
 fn pull_oci_image_by_fqn(image_ref: &str, show_output: bool) {
