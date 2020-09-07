@@ -15,7 +15,7 @@ use std::{
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::avatar_env::{
-    AvatarEnv, FORCE_PROJECT_PATH, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN,
+    AvatarEnv, FORCE_PROJECT_PATH, MOUNT_TMP_PATHS, PROCESS_ID, PROJECT_INTERNAL_ID, SESSION_TOKEN,
 };
 use crate::directories::{
     check_if_inside_project_dir, get_project_path, is_inside_project_dir, AVATARFILE_LOCK_NAME,
@@ -197,6 +197,20 @@ fn run_docker_command(
                     host_path.display(),
                     container_path.display()
                 ));
+            }
+        }
+    }
+
+    if let Ok(mount_tmp_paths) = env::var(MOUNT_TMP_PATHS) {
+        if mount_tmp_paths.to_lowercase() == "true" {
+            for arg in env::args().skip(skip_args) {
+                let potential_path = PathBuf::from(&arg);
+                if potential_path.is_absolute() && potential_path.starts_with("/tmp") {
+                    let tmp_path = potential_path.display();
+                    dynamic_mounts.push("--mount".to_string());
+                    dynamic_mounts
+                        .push(format!("type=bind,source={},target={}", tmp_path, tmp_path));
+                }
             }
         }
     }

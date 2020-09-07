@@ -17,6 +17,7 @@ else
   AVATAR_CLI_BIN="/avatar/bin/path";
 fi
 
+export AVATAR_CLI_MOUNT_TMP_PATHS="true";
 export AVATAR_CLI_FORCE_PROJECT_PATH="/avatar/prj/path";
 
 exec "${AVATAR_CLI_BIN}" run "${0##*/}" -- "$@";

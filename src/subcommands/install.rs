@@ -31,7 +31,7 @@ use crate::{
     },
 };
 
-const BIN_WRAPPER_TMPL: &'static [u8; 755] = include_bytes!("../embedded_files/bin_wrapper.sh");
+const BIN_WRAPPER_TMPL: &'static [u8; 797] = include_bytes!("../embedded_files/bin_wrapper.sh");
 
 fn change_volume_permissions(volume_name: &str, container_path: &PathBuf) {
     match Command::new("docker")
