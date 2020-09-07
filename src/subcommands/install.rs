@@ -7,8 +7,8 @@
 use std::{
     collections::BTreeMap,
     env,
-    fs::{create_dir_all, remove_dir_all, write},
-    os::unix::fs::symlink,
+    fs::{create_dir_all, remove_dir_all, set_permissions, write, Permissions},
+    os::unix::fs::{symlink, PermissionsExt},
     path::PathBuf,
     process::{exit, Command},
     str::from_utf8,
@@ -784,13 +784,22 @@ fn populate_volatile_wrappers_dir(
     let wrapper_content = wrapper_content.as_bytes();
 
     for binary_name in project_state.get_binary_names() {
-        if let Err(e) = write(wrappers_path.join(binary_name), wrapper_content) {
+        let wrapper_path = wrappers_path.join(binary_name);
+        if let Err(e) = write(&wrapper_path, wrapper_content) {
             eprintln!(
                 "Unable to create wrapper script for {}\n\n{}\n",
                 binary_name,
                 e.to_string()
             );
             exit(exitcode::CANTCREAT)
+        }
+        if let Err(e) = set_permissions(&wrapper_path, Permissions::from_mode(0o755)) {
+            eprintln!(
+                "Unable to set permissions for wrapper script ({}).\n\n{}",
+                wrapper_path.display(),
+                e.to_string()
+            );
+            exit(exitcode::OSERR)
         }
     }
 }
