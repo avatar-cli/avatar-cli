@@ -13,7 +13,8 @@ requirements:
 
 ### Commit signatures
 For security & regulations compliance, commits must be cryptographically signed
-by PGP or GPG. You can read more about this topic here:
+by [PGP](https://www.openpgp.org/) or [GPG](https://gnupg.org/). You can read
+more about this topic here:
   - [Git's documentation](https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work)
   - [Github's documentation](https://help.github.com/en/github/authenticating-to-github/signing-commits)
   - [Gitlab's documentation](https://docs.gitlab.com/ee/user/project/repository/gpg_signed_commits/).

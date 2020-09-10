@@ -4,14 +4,16 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Why](#why)
-3. [How to install Avatar-CLI](#how-to-install-avatar-cli)
-4. [How to use Avatar-CLI](#how-to-use-avatar-cli)
-5. [Using Avatar-CLI in CI/CD pipelines](#using-avatar-cli-in-cicd-pipelines)
-6. [Using Avatar-CLI inside scripts](#using-avatar-cli-inside-scripts)
-7. [Using Avatar-CLI with Jetbrains IDEs](#using-avatar-cli-with-jetbrains-ides)
-8. [Troubleshooting](#troubleshooting)
+1.  [Introduction](#introduction)
+2.  [Why](#why)
+3.  [How to install Avatar-CLI](#how-to-install-avatar-cli)
+4.  [How to use Avatar-CLI](#how-to-use-avatar-cli)
+5.  [Using Avatar-CLI in CI/CD pipelines](#using-avatar-cli-in-cicd-pipelines)
+6.  [Using Avatar-CLI inside scripts](#using-avatar-cli-inside-scripts)
+7.  [Using Avatar-CLI with Jetbrains IDEs](#using-avatar-cli-with-jetbrains-ides)
+8.  [Troubleshooting](#troubleshooting)
+9.  [How to contribute](#how-to-contribute)
+10. [Community](#community)
 
 ## Introduction
 
@@ -283,6 +285,16 @@ sure that its own managed paths are the first ones to be evaluated.
 ## How to contribute
 
 Read the [contributing guidelines](CONTRIBUTING.md).
+
+## Community
+
+- **Discord:** Avatar-CLI has a
+               [small community in Discord](https://discord.gg/8ek44UM) where we
+               can discuss about doubts, problems, and also the development
+               process itself.
+- **Twitter:** We have an
+               [official Twitter account](https://twitter.com/avatar_cli) that
+               we use to make announcements.
 
 ## License
 
