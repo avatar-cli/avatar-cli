@@ -1,6 +1,11 @@
 # Avatar CLI
 
-[![Pipeline Status]][Dev Commits] [![Latest Version]][crates.io] ![License]
+[![Pipeline Status]][Dev Commits]
+[![Latest Version]][crates.io]
+[![Crates Recent Downloads]][crates.io]
+[![GL Stars]][GL Starrers]
+[![GH Stars]][GH Starrers]
+![License]
 
 ## Table of Contents
 
@@ -301,7 +306,12 @@ Read the [contributing guidelines](CONTRIBUTING.md).
 Avatar-CLI is licensed under the [GPL 3.0 license](LICENSE).
 
 [crates.io]: https://crates.io/crates/avatar-cli
+[Crates Recent Downloads]: https://img.shields.io/crates/dr/avatar-cli?label=recent%20crates.io%20downloads
 [Dev Commits]: https://gitlab.com/avatar-cli/avatar-cli/-/commits/dev
+[GH Stars]: https://img.shields.io/github/stars/avatar-cli/avatar-cli?label=github%20stars
+[GL Stars]: https://img.shields.io/badge/dynamic/json?color=green&label=gitlab%20stars&query=%24.star_count&url=https%3A%2F%2Fgitlab.com%2Fapi%2Fv4%2Fprojects%2F16768696
+[GH Starrers]: https://github.com/avatar-cli/avatar-cli/stargazers
+[GL Starrers]: https://gitlab.com/avatar-cli/avatar-cli/-/starrers
 [License]: https://img.shields.io/crates/l/avatar-cli.svg
 [Latest Version]: https://img.shields.io/crates/v/avatar-cli.svg
 [Pipeline Status]: https://gitlab.com/avatar-cli/avatar-cli/badges/dev/pipeline.svg
