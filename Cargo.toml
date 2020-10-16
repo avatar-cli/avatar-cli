@@ -10,6 +10,7 @@ categories = [
   "development-tools",
   "emulators"
 ]
+homepage = "https://www.avatar-cli.dev"
 description = "Magic wrapper to run containerized CLI tools"
 readme = "README.md"
 repository = "https://gitlab.com/avatar-cli/avatar-cli.git"
@@ -29,14 +30,14 @@ path = "src/main.rs"
 
 [dependencies]
 atty = "0.2"
-clap = "2.33.1"
-dirs = "3.0.1"
-duct = "0.13.4"
-exitcode = "1.1.2"
-nix = "0.18.0"
-ring = "0.16.15"
+clap = "2.33"
+dirs = "3.0"
+duct = "0.13"
+exitcode = "1.1"
+nix = "0.18"
+ring = "0.16"
 serde_yaml = "0.8"
-which = "4.0.1"
+which = "4.0"
 
   [dependencies.hex]
   version = "0.4"
