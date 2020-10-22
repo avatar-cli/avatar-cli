@@ -1,6 +1,6 @@
 [package]
 name = "avatar-cli"
-version = "0.18.1"
+version = "0.18.2"
 license = "GPL-3.0"
 authors = [ "Andres Correa Casablanca <castarco@coderspirit.xyz>" ]
 keywords = [ "cli", "containers", "docker" ]
@@ -10,7 +10,7 @@ categories = [
   "development-tools",
   "emulators"
 ]
-homepage = "https://www.avatar-cli.dev"
+homepage = "https://avatar-cli.dev"
 description = "Magic wrapper to run containerized CLI tools"
 readme = "README.md"
 repository = "https://gitlab.com/avatar-cli/avatar-cli.git"
